@@ -36,7 +36,7 @@ async def push_and_wait(queue: str, payload: dict, timeout: int | None = None) -
         return None
     finally:
         await pubsub.unsubscribe(channel)
-        await pubsub.close()
+        await pubsub.aclose()
 
 
 async def _wait_for_message(pubsub):

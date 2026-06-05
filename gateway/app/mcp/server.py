@@ -77,8 +77,8 @@ def _json_error(msg_id, code: int, message: str):
 
 
 routes = [
-    Route("/mcp", endpoint=sse_endpoint, methods=["GET"]),
-    Route("/mcp", endpoint=message_endpoint, methods=["POST"]),
+    Route("/", endpoint=sse_endpoint, methods=["GET"]),
+    Route("/", endpoint=message_endpoint, methods=["POST"]),
 ]
 
 mcp_app = Starlette(routes=routes)

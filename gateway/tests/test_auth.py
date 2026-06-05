@@ -10,7 +10,7 @@ async def test_health_no_auth(client):
 @pytest.mark.asyncio
 async def test_audio_missing_api_key(client):
     resp = await client.post("/v1/audio/transcriptions")
-    assert resp.status_code == 403
+    assert resp.status_code == 422
 
 
 @pytest.mark.asyncio

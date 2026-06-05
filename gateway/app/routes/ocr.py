@@ -15,9 +15,6 @@ class OCRResponse(BaseModel):
     task_id: str | None = None
 
 
-MAX_SIZE = settings.max_upload_size_mb * 1024 * 1024
-
-
 @router.post("/ocr")
 async def extract_text(
     file: UploadFile = File(...),
@@ -25,7 +22,7 @@ async def extract_text(
     async_: bool = Form(False, alias="async"),
 ):
     contents = await file.read()
-    if len(contents) > MAX_SIZE:
+    if len(contents) > settings.max_upload_size_mb * 1024 * 1024:
         raise HTTPException(status_code=413, detail="File too large")
 
     object_name = await upload_file(contents, prefix="ocr/")

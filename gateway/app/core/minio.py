@@ -1,3 +1,4 @@
+import io
 import uuid
 
 from .config import settings
@@ -10,7 +11,7 @@ async def upload_file(data: bytes, prefix: str = "") -> str:
     mc.put_object(
         settings.minio_bucket,
         object_name,
-        data,
+        io.BytesIO(data),
         length=len(data),
     )
     return object_name
