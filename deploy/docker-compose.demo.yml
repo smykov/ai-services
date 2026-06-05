@@ -1,0 +1,111 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      AI_REDIS_URL: redis://redis:6379/0
+      AI_MINIO_ENDPOINT: minio:9000
+      AI_MINIO_ACCESS_KEY: minioadmin
+      AI_MINIO_SECRET_KEY: minioadmin
+      AI_MINIO_BUCKET: ai-services
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+
+  asr:
+    build:
+      context: ./asr
+      dockerfile: Dockerfile
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis: { condition: service_healthy }
+
+  tts-gpu:
+    build:
+      context: ./tts-gpu
+      dockerfile: Dockerfile
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: ai-services
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+
+  tts-cpu:
+    build:
+      context: ./tts-cpu
+      dockerfile: Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: ai-services
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    profiles:
+      - cpu-tts
+
+  surya:
+    build:
+      context: ./surya
+      dockerfile: Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis: { condition: service_healthy }
+
+volumes:
+  redis_data:
+  minio_data:
