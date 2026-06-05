@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Ecosystem AI Services",
-    version="0.1.0",
+    version="0.2.0-demo",
     lifespan=lifespan,
     docs_url="/docs",
 )
