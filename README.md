@@ -11,6 +11,7 @@ Monorepo for AI microservices (ASR, TTS, OCR) with MCP tool support and REST API
 | **tts-gpu** | Yes | XTTS-v2 / CosyVoice | Text → speech (high quality) |
 | **tts-cpu** | No | Piper TTS | Text → speech (CPU scaling) |
 | **surya** | Optional | Surya OCR | Image → text + layout |
+| **ollama** | Yes | Qwen2.5 7B | LLM inference (NLP, intent, chat) |
 
 ## Architecture
 
@@ -43,6 +44,7 @@ See [docs/REST-API.md](docs/REST-API.md) and [docs/MCP-PROTOCOL.md](docs/MCP-PRO
 ├── tts-gpu/          # GPU TTS worker (XTTS-v2)
 ├── tts-cpu/          # CPU TTS worker (Piper)
 ├── surya/            # Surya OCR worker
+├── nlp/              # NLP worker (optional Redis-based)
 ├── shared/           # Common: WorkerBase, MinIO uploader
 ├── deploy/           # Docker Compose, systemd service
 └── .github/workflows/# CI + Deploy pipelines
@@ -63,6 +65,10 @@ All settings via environment variables with `AI_` prefix:
 | `AI_MCP_BEARER_TOKEN` | `` | MCP Bearer token |
 | `AI_MAX_UPLOAD_SIZE_MB` | `100` | Max file upload size |
 | `AI_TASK_TIMEOUT` | `60` | Sync mode timeout (s) |
+| `AI_LLM_BASE_URL` | `http://ollama:11434/v1` | LLM API base URL |
+| `AI_LLM_API_KEY` | `` | LLM API key (for cloud providers) |
+| `AI_LLM_MODEL` | `qwen2.5:7b` | LLM model name |
+| `AI_DEFAULT_NLP_SYSTEM_PROMPT` | `You are a helpful...` | Default system prompt injected when missing |
 
 ## Development
 

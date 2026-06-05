@@ -41,6 +41,8 @@ services:
       AI_MINIO_SECRET_KEY: minioadmin
       AI_MINIO_BUCKET: ai-services
       AI_MAX_UPLOAD_SIZE_MB: 100
+      AI_LLM_BASE_URL: http://ollama:11434/v1
+      AI_LLM_MODEL: qwen2.5:7b
     depends_on:
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
@@ -107,6 +109,22 @@ services:
     profiles:
       - cpu-tts
 
+  ollama:
+    image: ollama/ollama:latest
+    profiles:
+      - gpu-workers
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      OLLAMA_HOST: 0.0.0.0
+
   surya:
     build:
       context: ../
@@ -126,3 +144,4 @@ services:
 volumes:
   redis_data:
   minio_data:
+  ollama_data:

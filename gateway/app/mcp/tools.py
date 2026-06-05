@@ -1,5 +1,6 @@
 from collections.abc import Awaitable, Callable
 
+from ..core.container import container
 from ..core.redis import push_task
 
 ToolHandler = Callable[..., Awaitable[dict]]
@@ -66,6 +67,39 @@ async def synthesize_speech(arguments: dict) -> dict:
         "model": arguments.get("model", "xtts-v2"),
     })
     return {"task_id": task_id, "status": "pending"}
+
+
+@register_tool("preprocess_query", {
+    "name": "preprocess_query",
+    "description": "Send messages to NLP model for intent detection, entity extraction, and query preprocessing",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "messages": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "role": {"type": "string", "enum": ["system", "user", "assistant"]},
+                        "content": {"type": "string"},
+                    },
+                    "required": ["role", "content"],
+                },
+                "description": "Chat messages in OpenAI format",
+            },
+            "temperature": {"type": "number", "description": "Sampling temperature", "default": 0.1},
+        },
+        "required": ["messages"],
+    },
+})
+async def preprocess_query(arguments: dict) -> dict:
+    messages = list(arguments["messages"])
+    data = await container.llm.chat_completions(
+        messages=messages,
+        temperature=arguments.get("temperature"),
+    )
+    content = data["choices"][0]["message"]["content"]
+    return {"content": content, "usage": data.get("usage", {})}
 
 
 @register_tool("extract_text", {

@@ -67,6 +67,34 @@ Response (200):
   {"text": "...", "blocks": [...], "task_id": "..."}
 ```
 
+### Chat Completions (OpenAI-compatible)
+
+```
+POST /v1/chat/completions
+
+Request body (JSON):
+  model         (string)  Model name (default: qwen2.5:7b)
+  messages      (array)   Chat messages: [{"role": "system|user|assistant", "content": "..."}]
+  temperature   (float)   Sampling temperature (default: 0.1)
+  max_tokens    (int)     Max tokens in response (optional)
+  stream        (bool)    Streaming (not yet supported)
+  response_format (obj)   JSON mode: {"type": "json_object"}
+
+Response (200):
+  Standard OpenAI chat completion format:
+  {
+    "id": "chatcmpl-xxx",
+    "object": "chat.completion",
+    "choices": [{"index": 0, "message": {"role": "assistant", "content": "..."}, "finish_reason": "stop"}],
+    "usage": {"prompt_tokens": N, "completion_tokens": N, "total_tokens": N}
+  }
+
+Notes:
+  - If no system message is provided, a default NLP system prompt is injected
+  - Set AI_LLM_BASE_URL=https://api.openai.com/v1 and AI_LLM_API_KEY=sk-... to use cloud
+  - Set AI_LLM_MODEL=gpt-4o to switch models without code changes
+```
+
 ### Task Status
 
 ```

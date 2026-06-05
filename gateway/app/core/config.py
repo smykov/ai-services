@@ -23,6 +23,15 @@ class Settings(BaseSettings):
 
     max_upload_size_mb: int = 100
 
+    llm_base_url: str = "http://ollama:11434/v1"
+    llm_api_key: str = ""
+    llm_model: str = "qwen2.5:7b"
+    default_nlp_system_prompt: str = (
+        "You are a helpful AI assistant. "
+        "When asked to analyze or process a request, respond in JSON "
+        "with intent, entities, and classification fields."
+    )
+
     model_config = SettingsConfigDict(env_prefix="AI_")
 
 

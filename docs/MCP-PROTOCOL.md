@@ -46,6 +46,23 @@ Server-Sent Events (SSE) according to MCP specification:
   }}
 ```
 
+### preprocess_query
+
+```json
+→ {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {
+    "name": "preprocess_query",
+    "arguments": {
+      "messages": [
+        {"role": "user", "content": "analyze this request: check VM 105 status"}
+      ],
+      "temperature": 0.1
+    }
+  }}
+← {"jsonrpc": "2.0", "id": 5, "result": {
+    "content": [{"type": "text", "text": "{\"content\": \"...\", \"usage\": {...}}"}]
+  }}
+```
+
 ### extract_text
 
 ```json

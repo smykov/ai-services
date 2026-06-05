@@ -10,15 +10,16 @@
 
 ## GPU Workers
 
-All 3 GPU workers (asr + tts-gpu + surya) fit on a single RTX 3090 (24 GB):
+All GPU workers fit on a single RTX 3090 (24 GB):
 
 | Service | VRAM (idle) |
 |---------|------------|
-| asr (large-v3) | 3.1 GB |
+| asr (large-v3) | 3.0 GB |
 | tts-gpu (XTTS-v2) | 2.0 GB |
 | surya | 1.5 GB |
+| ollama (qwen2.5:7b) | 4.5 GB |
 | CUDA overhead | 0.5 GB |
-| **Total** | **7.1 GB / 24 GB** |
+| **Total** | **11.5 GB / 24 GB** |
 
 ## CPU Scaling
 
@@ -42,5 +43,9 @@ Redis Streams with consumer groups — each worker type forms its own group:
 - `tts:queue` → `tts-workers`
 - `tts:cpu:queue` → `tts-cpu-workers`
 - `surya:queue` → `surya-workers`
+
+For NLP, the gateway proxies directly to Ollama (no Redis queue). Cloud replacement:
+- Set `AI_LLM_BASE_URL=https://api.openai.com/v1` and `AI_LLM_API_KEY=sk-...`
+- Set `AI_LLM_MODEL=gpt-4o` (or any provider model)
 
 Add more workers per group for parallel processing (horizontal scale).

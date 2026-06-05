@@ -2,12 +2,14 @@ from minio import Minio
 from redis.asyncio import Redis
 
 from .config import settings
+from .llm import LLMService
 
 
 class Container:
     def __init__(self):
         self._redis: Redis | None = None
         self._minio: Minio | None = None
+        self._llm: LLMService | None = None
 
     @property
     async def redis(self) -> Redis:
@@ -29,10 +31,21 @@ class Container:
                 self._minio.make_bucket(settings.minio_bucket)
         return self._minio
 
+    @property
+    def llm(self) -> LLMService:
+        if self._llm is None:
+            self._llm = LLMService()
+        return self._llm
+
     async def close_redis(self):
         if self._redis:
             await self._redis.aclose()
             self._redis = None
+
+    async def close_llm(self):
+        if self._llm:
+            await self._llm.close()
+            self._llm = None
 
 
 container = Container()
