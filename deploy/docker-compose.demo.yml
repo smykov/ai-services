@@ -49,6 +49,8 @@ services:
     build:
       context: ../
       dockerfile: asr/Dockerfile
+    profiles:
+      - gpu-workers
     deploy:
       resources:
         reservations:
@@ -70,6 +72,8 @@ services:
     build:
       context: ../
       dockerfile: tts-gpu/Dockerfile
+    profiles:
+      - gpu-workers
     deploy:
       resources:
         reservations:
@@ -107,6 +111,8 @@ services:
     build:
       context: ../
       dockerfile: surya/Dockerfile
+    profiles:
+      - gpu-workers
     environment:
       REDIS_URL: redis://redis:6379/0
       MINIO_ENDPOINT: minio:9000
