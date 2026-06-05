@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 
@@ -20,7 +21,7 @@ class SuryaWorker(WorkerBase):
 
     async def process(self, data: dict) -> dict:
         object_name = data.get("object_name", "")
-        languages = data.get("languages", ["en", "ru"])
+        languages = json.loads(data.get("languages", '["en", "ru"]'))
 
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
             response = self._mc.get_object(BUCKET, object_name)

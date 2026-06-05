@@ -3,7 +3,7 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_mcp_initialize(client):
-    resp = await client.post("/mcp", json={
+    resp = await client.post("/mcp/", json={
         "jsonrpc": "2.0",
         "id": 1,
         "method": "initialize",
@@ -15,7 +15,7 @@ async def test_mcp_initialize(client):
 
 @pytest.mark.asyncio
 async def test_mcp_list_tools(client):
-    resp = await client.post("/mcp", json={
+    resp = await client.post("/mcp/", json={
         "jsonrpc": "2.0",
         "id": 2,
         "method": "tools/list",
@@ -28,7 +28,7 @@ async def test_mcp_list_tools(client):
 
 @pytest.mark.asyncio
 async def test_mcp_call_tool(client):
-    resp = await client.post("/mcp", json={
+    resp = await client.post("/mcp/", json={
         "jsonrpc": "2.0",
         "id": 3,
         "method": "tools/call",
@@ -45,7 +45,7 @@ async def test_mcp_call_tool(client):
 
 @pytest.mark.asyncio
 async def test_mcp_unknown_tool(client):
-    resp = await client.post("/mcp", json={
+    resp = await client.post("/mcp/", json={
         "jsonrpc": "2.0",
         "id": 4,
         "method": "tools/call",
@@ -60,7 +60,7 @@ async def test_mcp_unknown_tool(client):
 
 @pytest.mark.asyncio
 async def test_mcp_unknown_method(client):
-    resp = await client.post("/mcp", json={
+    resp = await client.post("/mcp/", json={
         "jsonrpc": "2.0",
         "id": 5,
         "method": "foobar",

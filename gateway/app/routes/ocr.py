@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
@@ -30,7 +32,7 @@ async def extract_text(
     if async_:
         task_id = await push_task("surya:queue", {
             "object_name": object_name,
-            "languages": languages.split(","),
+            "languages": json.dumps(languages.split(",")),
         })
         return {"task_id": task_id, "status": "queued"}
 
