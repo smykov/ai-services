@@ -2,8 +2,9 @@ import subprocess
 import tempfile
 
 
-def synthesize(text: str, voice: str = "default", model_name: str = "piper") -> str:
-    output_path = tempfile.mktemp(suffix=".wav")
+def synthesize(text: str, voice: str = "default") -> str:
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+        output_path = f.name
 
     subprocess.run(
         ["piper", "--model", voice, "--output-file", output_path],

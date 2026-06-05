@@ -1,0 +1,112 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    restart: always
+    volumes:
+      - minio_data:/data
+    command: server /data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  gateway:
+    image: ghcr.io/ecosystem/gateway:${IMAGE_TAG:-latest}
+    ports:
+      - "80:8000"
+    restart: always
+    environment:
+      AI_REDIS_URL: redis://redis:6379/0
+      AI_MINIO_ENDPOINT: minio:9000
+      AI_MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      AI_MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      AI_MINIO_BUCKET: ai-services
+      AI_API_KEYS: ${AI_API_KEYS}
+      AI_MCP_BEARER_TOKEN: ${AI_MCP_BEARER_TOKEN}
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+
+  asr:
+    image: ghcr.io/ecosystem/asr:${IMAGE_TAG:-latest}
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ai-services
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+
+  tts-gpu:
+    image: ghcr.io/ecosystem/tts-gpu:${IMAGE_TAG:-latest}
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ai-services
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+
+  tts-cpu:
+    image: ghcr.io/ecosystem/tts-cpu:${IMAGE_TAG:-latest}
+    restart: always
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ai-services
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    profiles:
+      - cpu-tts
+
+  surya:
+    image: ghcr.io/ecosystem/surya:${IMAGE_TAG:-latest}
+    restart: always
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ai-services
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+
+volumes:
+  redis_data:
+  minio_data:

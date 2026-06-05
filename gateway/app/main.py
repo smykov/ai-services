@@ -2,18 +2,18 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from .core.redis import init_redis, close_redis
-from .core.minio import init_minio
+from .core.container import container
+from .core.redis import push_task, wait_for_result
 from .mcp.server import mcp_app
-from .routes import audio, ocr, tasks, health
+from .routes import audio, ocr, tasks, health, metrics
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_redis()
-    await init_minio()
+    _ = container.minio
+    _ = await container.redis
     yield
-    await close_redis()
+    await container.close_redis()
 
 
 app = FastAPI(
@@ -24,6 +24,7 @@ app = FastAPI(
 )
 
 app.include_router(health.router)
+app.include_router(metrics.router)
 app.include_router(audio.router, prefix="/v1")
 app.include_router(ocr.router, prefix="/v1")
 app.include_router(tasks.router, prefix="/v1")

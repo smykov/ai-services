@@ -30,8 +30,8 @@ services:
 
   gateway:
     build:
-      context: ./gateway
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: gateway/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -40,14 +40,15 @@ services:
       AI_MINIO_ACCESS_KEY: minioadmin
       AI_MINIO_SECRET_KEY: minioadmin
       AI_MINIO_BUCKET: ai-services
+      AI_MAX_UPLOAD_SIZE_MB: 100
     depends_on:
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
 
   asr:
     build:
-      context: ./asr
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: asr/Dockerfile
     deploy:
       resources:
         reservations:
@@ -57,13 +58,18 @@ services:
               capabilities: [gpu]
     environment:
       REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: ai-services
     depends_on:
       redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
 
   tts-gpu:
     build:
-      context: ./tts-gpu
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: tts-gpu/Dockerfile
     deploy:
       resources:
         reservations:
@@ -83,8 +89,8 @@ services:
 
   tts-cpu:
     build:
-      context: ./tts-cpu
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: tts-cpu/Dockerfile
     environment:
       REDIS_URL: redis://redis:6379/0
       MINIO_ENDPOINT: minio:9000
@@ -99,12 +105,17 @@ services:
 
   surya:
     build:
-      context: ./surya
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: surya/Dockerfile
     environment:
       REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: ai-services
     depends_on:
       redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
 
 volumes:
   redis_data:

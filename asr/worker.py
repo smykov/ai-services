@@ -1,66 +1,37 @@
-import asyncio
-import json
 import os
 import tempfile
 
-import redis.asyncio as aioredis
-
+from shared.worker_base import WorkerBase
+from shared.minio_uploader import create_minio_client
 from transcriber import transcribe
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
-QUEUE_KEY = "asr:queue"
-GROUP_NAME = "asr-workers"
-CONSUMER_NAME = os.environ.get("HOSTNAME", "asr-worker-1")
 
+class ASRWorker(WorkerBase):
+    queue_key = "asr:queue"
+    group_name = "asr-workers"
 
-async def process_task(message):
-    data = json.loads(message["data"])
-    task_id = data["task_id"]
-    audio_data = bytes.fromhex(data.get("data", ""))
-    language = data.get("language", "auto")
-    model_name = data.get("model", "turbo")
+    def __init__(self):
+        super().__init__()
+        self._mc = create_minio_client()
 
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-        f.write(audio_data)
-        audio_path = f.name
+    async def process(self, data: dict) -> dict:
+        object_name = data.get("object_name", "")
+        language = data.get("language", "auto")
+        model_name = data.get("model", "turbo")
 
-    try:
-        result = transcribe(audio_path, language=language, model_name=model_name)
-        r = aioredis.from_url(REDIS_URL, decode_responses=True)
-        await r.set(f"task:{task_id}", json.dumps(result), ex=3600)
-        await r.publish(f"result:{task_id}", json.dumps(result))
-        await r.xack(QUEUE_KEY, GROUP_NAME, message["id"])
-        await r.close()
-    finally:
-        os.unlink(audio_path)
-
-
-async def main():
-    r = aioredis.from_url(REDIS_URL, decode_responses=True)
-    try:
-        await r.xgroup_create(QUEUE_KEY, GROUP_NAME, id="0", mkstream=True)
-    except aioredis.ResponseError:
-        pass
-
-    print(f"ASR worker {CONSUMER_NAME} started, waiting for tasks...")
-
-    while True:
-        try:
-            messages = await r.xreadgroup(
-                GROUP_NAME, CONSUMER_NAME, {QUEUE_KEY: ">"}, count=1, block=5000
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+            response = self._mc.get_object(
+                os.environ.get("MINIO_BUCKET", "ai-services"),
+                object_name,
             )
-            if messages:
-                for _, msgs in messages:
-                    for msg in msgs:
-                        await process_task(msg)
-        except asyncio.CancelledError:
-            break
-        except Exception as e:
-            print(f"Error: {e}")
-            await asyncio.sleep(1)
+            f.write(response.read())
+            audio_path = f.name
 
-    await r.close()
+        try:
+            return transcribe(audio_path, language=language, model_name=model_name)
+        finally:
+            os.unlink(audio_path)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    ASRWorker().start()

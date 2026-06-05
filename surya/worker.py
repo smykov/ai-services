@@ -1,65 +1,36 @@
-import asyncio
-import json
 import os
 import tempfile
 
-import redis.asyncio as aioredis
-
+from shared.worker_base import WorkerBase
+from shared.minio_uploader import create_minio_client
 from reader import extract_text
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
-QUEUE_KEY = "surya:queue"
-GROUP_NAME = "surya-workers"
-CONSUMER_NAME = os.environ.get("HOSTNAME", "surya-worker-1")
+
+BUCKET = os.environ.get("MINIO_BUCKET", "ai-services")
 
 
-async def process_task(message):
-    data = json.loads(message["data"])
-    task_id = data["task_id"]
-    image_data = bytes.fromhex(data.get("data", ""))
-    languages = data.get("languages", ["en", "ru"])
+class SuryaWorker(WorkerBase):
+    queue_key = "surya:queue"
+    group_name = "surya-workers"
 
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
-        f.write(image_data)
-        image_path = f.name
+    def __init__(self):
+        super().__init__()
+        self._mc = create_minio_client()
 
-    try:
-        result = extract_text(image_path, languages=languages)
-        r = aioredis.from_url(REDIS_URL, decode_responses=True)
-        await r.set(f"task:{task_id}", json.dumps(result), ex=3600)
-        await r.publish(f"result:{task_id}", json.dumps(result))
-        await r.xack(QUEUE_KEY, GROUP_NAME, message["id"])
-        await r.close()
-    finally:
-        os.unlink(image_path)
+    async def process(self, data: dict) -> dict:
+        object_name = data.get("object_name", "")
+        languages = data.get("languages", ["en", "ru"])
 
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+            response = self._mc.get_object(BUCKET, object_name)
+            f.write(response.read())
+            image_path = f.name
 
-async def main():
-    r = aioredis.from_url(REDIS_URL, decode_responses=True)
-    try:
-        await r.xgroup_create(QUEUE_KEY, GROUP_NAME, id="0", mkstream=True)
-    except aioredis.ResponseError:
-        pass
-
-    print(f"Surya worker {CONSUMER_NAME} started, waiting for tasks...")
-
-    while True:
         try:
-            messages = await r.xreadgroup(
-                GROUP_NAME, CONSUMER_NAME, {QUEUE_KEY: ">"}, count=1, block=5000
-            )
-            if messages:
-                for _, msgs in messages:
-                    for msg in msgs:
-                        await process_task(msg)
-        except asyncio.CancelledError:
-            break
-        except Exception as e:
-            print(f"Error: {e}")
-            await asyncio.sleep(1)
-
-    await r.close()
+            return extract_text(image_path, languages=languages)
+        finally:
+            os.unlink(image_path)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    SuryaWorker().start()

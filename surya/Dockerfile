@@ -4,9 +4,10 @@ RUN apt-get update && apt-get install -y python3-pip && rm -rf /var/lib/apt/list
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY surya/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY worker.py reader.py ./
+COPY surya/worker.py surya/reader.py ./
+COPY shared/ ./shared/
 
 CMD ["python3", "worker.py"]

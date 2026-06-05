@@ -31,33 +31,46 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./${{ matrix.service }}
+          context: .
+          file: ./${{ matrix.service }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy-demo:
     needs: build-and-push
     runs-on: [self-hosted, proxmox, linux]
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to VM 110
+      - name: Deploy to VM 110 via jump host
         env:
           SSH_KEY: ${{ secrets.DEMO_SSH_KEY }}
-          HOST: ${{ secrets.DEMO_HOST }}
+          PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
+          VM110_HOST: ${{ secrets.VM110_HOST }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key \
+            -J root@$PROXMOX_HOST \
+            root@$VM110_HOST "
+            mkdir -p /opt/ecosystem-ai-services
+          "
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key \
+            -o ProxyJump=root@$PROXMOX_HOST \
             deploy/docker-compose.demo.yml \
-            $HOST:/opt/ecosystem-ai-services/
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $HOST "
+            root@$VM110_HOST:/opt/ecosystem-ai-services/
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key \
+            -J root@$PROXMOX_HOST \
+            root@$VM110_HOST "
             cd /opt/ecosystem-ai-services &&
-            export TAG=${{ github.ref_name }} &&
+            IMAGE_TAG=${{ github.ref_name }} \
             docker compose -f docker-compose.demo.yml pull &&
             docker compose -f docker-compose.demo.yml up -d
           "

@@ -4,7 +4,7 @@ from ..core.auth import verify_api_key
 from ..core.redis import get_task_result
 from ..core.minio import get_presigned_url
 
-router = APIRouter(dependencies=[Depends(verify_api_key)])
+router = APIRouter(dependencies=[Depends(verify_api_key)], tags=["tasks"])
 
 
 @router.get("/tasks/{task_id}")
