@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from ..core.auth import verify_api_key
-from ..core.redis import push_task, push_and_wait
-from ..core.minio import upload_file
 from ..core.config import settings
+from ..core.minio import upload_file
+from ..core.redis import push_and_wait, push_task
 
 router = APIRouter(dependencies=[Depends(verify_api_key)], tags=["audio"])
 

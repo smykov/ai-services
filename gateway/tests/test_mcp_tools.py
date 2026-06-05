@@ -1,4 +1,8 @@
-from app.mcp.tools import list_tools, dispatch
+import asyncio
+
+import pytest
+
+from app.mcp.tools import dispatch, list_tools
 
 
 def test_list_tools():
@@ -16,7 +20,5 @@ def test_tools_have_schemas():
 
 
 def test_dispatch_unknown_tool():
-    import pytest
     with pytest.raises(ValueError, match="Unknown tool"):
-        import asyncio
         asyncio.run(dispatch("nonexistent", {}))

@@ -1,5 +1,5 @@
-from redis.asyncio import Redis
 from minio import Minio
+from redis.asyncio import Redis
 
 from .config import settings
 

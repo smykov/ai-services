@@ -2,6 +2,7 @@ import os
 import tempfile
 
 from reader import extract_text
+
 from shared.minio_uploader import create_minio_client
 from shared.worker_base import WorkerBase
 

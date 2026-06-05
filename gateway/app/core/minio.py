@@ -1,7 +1,7 @@
 import uuid
 
-from .container import container
 from .config import settings
+from .container import container
 
 
 async def upload_file(data: bytes, prefix: str = "") -> str:

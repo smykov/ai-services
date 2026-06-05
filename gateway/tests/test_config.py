@@ -1,12 +1,13 @@
-from app.core.config import settings
+from app.core.config import Settings, settings
 
 
 def test_default_config():
-    assert settings.max_upload_size_mb == 100
-    assert settings.task_timeout == 60
-    assert settings.task_result_ttl == 3600
-    assert settings.api_keys == set()
-    assert settings.mcp_bearer_token is None
+    s = Settings()
+    assert s.max_upload_size_mb == 100
+    assert s.task_timeout == 60
+    assert s.task_result_ttl == 3600
+    assert s.api_keys == set()
+    assert s.mcp_bearer_token is None
 
 
 def test_config_env_prefix(monkeypatch):

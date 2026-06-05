@@ -1,9 +1,9 @@
 import os
 import tempfile
 
-from shared.worker_base import WorkerBase
-from shared.minio_uploader import create_minio_client
 from transcriber import transcribe
+from shared.minio_uploader import create_minio_client
+from shared.worker_base import WorkerBase
 
 
 class ASRWorker(WorkerBase):

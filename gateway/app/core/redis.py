@@ -2,8 +2,8 @@ import asyncio
 import json
 import uuid
 
-from .container import container
 from .config import settings
+from .container import container
 
 
 async def push_task(queue: str, payload: dict) -> str:
@@ -32,7 +32,7 @@ async def push_and_wait(queue: str, payload: dict, timeout: int | None = None) -
         if result:
             return json.loads(result["data"])
         return None
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return None
     finally:
         await pubsub.unsubscribe(channel)

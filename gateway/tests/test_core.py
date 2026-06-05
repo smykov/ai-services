@@ -1,5 +1,5 @@
-import pytest
 from fastapi import HTTPException
+import pytest
 
 from app.core.auth import verify_api_key
 from app.core.config import settings
