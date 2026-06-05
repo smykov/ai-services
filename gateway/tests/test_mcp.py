@@ -23,7 +23,7 @@ async def test_mcp_list_tools(client):
     assert resp.status_code == 200
     tools = resp.json()["result"]["tools"]
     names = {t["name"] for t in tools}
-    assert names == {"transcribe_audio", "synthesize_speech", "extract_text"}
+    assert names == {"transcribe_audio", "synthesize_speech", "extract_text", "preprocess_query"}
 
 
 @pytest.mark.asyncio
