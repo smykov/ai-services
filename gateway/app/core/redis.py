@@ -1,6 +1,6 @@
+import asyncio
 import json
 import uuid
-import asyncio
 
 from .container import container
 from .config import settings

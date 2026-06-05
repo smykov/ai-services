@@ -1,4 +1,3 @@
-import pytest
 from shared.worker_base import WorkerBase
 
 

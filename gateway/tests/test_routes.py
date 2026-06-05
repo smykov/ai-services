@@ -1,6 +1,5 @@
 import pytest
 
-
 HEADERS = {"X-API-Key": "test-key-123"}
 
 

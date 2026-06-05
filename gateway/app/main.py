@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .core.container import container
-from .core.redis import push_task, wait_for_result
+from .core.redis import push_task
 from .mcp.server import mcp_app
 from .routes import audio, ocr, tasks, health, metrics
 
