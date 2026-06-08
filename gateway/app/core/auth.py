@@ -3,7 +3,7 @@ from fastapi import Header, HTTPException, Request, status
 from .config import settings
 
 
-async def verify_api_key(x_api_key: str = Header(...)):
+async def verify_api_key(x_api_key: str = Header(None)):
     if not settings.api_keys:
         return None
     if x_api_key not in settings.api_keys:

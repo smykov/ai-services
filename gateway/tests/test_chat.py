@@ -98,7 +98,7 @@ async def test_chat_completions_missing_auth(client):
         "/v1/chat/completions",
         json={"messages": [{"role": "user", "content": "Hi"}]},
     )
-    assert resp.status_code == 422
+    assert resp.status_code == 401
 
 
 @pytest.mark.asyncio
