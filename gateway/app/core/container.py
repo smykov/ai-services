@@ -1,3 +1,5 @@
+from threading import Lock
+
 from minio import Minio
 from redis.asyncio import Redis
 
@@ -10,6 +12,7 @@ class Container:
         self._redis: Redis | None = None
         self._minio: Minio | None = None
         self._llm: LLMService | None = None
+        self._llm_lock = Lock()
 
     @property
     async def redis(self) -> Redis:
@@ -34,7 +37,9 @@ class Container:
     @property
     def llm(self) -> LLMService:
         if self._llm is None:
-            self._llm = LLMService()
+            with self._llm_lock:
+                if self._llm is None:
+                    self._llm = LLMService()
         return self._llm
 
     async def close_redis(self):

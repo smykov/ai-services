@@ -227,3 +227,46 @@ async def test_chat_completions_with_response_format(client, monkeypatch):
         },
     )
     assert received["response_format"] == {"type": "json_object"}
+
+
+@pytest.mark.asyncio
+async def test_chat_completions_llm_error_propagates(client, monkeypatch):
+    from app.core.llm import LLMService
+
+    async def failing_completions(self, messages, **kwargs):
+        raise RuntimeError("LLM backend error (502): Bad Gateway")
+
+    monkeypatch.setattr(LLMService, "chat_completions", failing_completions)
+
+    resp = await client.post(
+        "/v1/chat/completions",
+        headers=HEADERS,
+        json={"messages": [{"role": "user", "content": "Hi"}]},
+    )
+    assert resp.status_code == 503
+    assert "LLM backend error" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_chat_completions_no_temperature_default(client, monkeypatch):
+    from app.core.llm import LLMService
+
+    received = {}
+
+    async def capturing_completions(self, messages, **kwargs):
+        received["temperature"] = kwargs.get("temperature")
+        return {
+            "id": "chatcmpl-test",
+            "object": "chat.completion",
+            "choices": [{"index": 0, "message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}],
+            "usage": {},
+        }
+
+    monkeypatch.setattr(LLMService, "chat_completions", capturing_completions)
+
+    await client.post(
+        "/v1/chat/completions",
+        headers=HEADERS,
+        json={"messages": [{"role": "user", "content": "Hi"}]},
+    )
+    assert received["temperature"] is None

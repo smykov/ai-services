@@ -15,7 +15,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     model: str | None = None
     messages: list[ChatMessage]
-    temperature: float | None = 0.1
+    temperature: float | None = None
     max_tokens: int | None = None
     stream: bool = False
     response_format: dict | None = None

@@ -32,7 +32,7 @@ async def push_and_wait(queue: str, payload: dict, timeout: int | None = None) -
         if result:
             return json.loads(result["data"])
         return None
-    except TimeoutError:
+    except asyncio.TimeoutError:
         return None
     finally:
         await pubsub.unsubscribe(channel)

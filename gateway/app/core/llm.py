@@ -1,24 +1,41 @@
-from httpx import AsyncClient, HTTPError
+import logging
+
+from httpx import AsyncClient, HTTPError, RequestError
 
 from .config import settings
 
+logger = logging.getLogger(__name__)
+
 
 class LLMService:
-    def __init__(self):
-        self._client = AsyncClient(timeout=120)
+    def __init__(
+        self,
+        base_url: str | None = None,
+        api_key: str | None = None,
+        model: str | None = None,
+        default_system_prompt: str | None = None,
+        timeout: float = 120,
+    ):
+        self._base_url = (base_url or settings.llm_base_url).rstrip("/")
+        self._api_key = api_key if api_key is not None else settings.llm_api_key
+        self._model = model or settings.llm_model
+        self._default_system_prompt = (
+            default_system_prompt if default_system_prompt is not None else settings.default_nlp_system_prompt
+        )
+        self._client = AsyncClient(timeout=timeout)
 
     async def close(self):
         await self._client.aclose()
 
     def _inject_system_prompt(self, messages: list[dict]) -> list[dict]:
         has_system = any(m["role"] == "system" for m in messages)
-        if not has_system and settings.default_nlp_system_prompt:
-            return [{"role": "system", "content": settings.default_nlp_system_prompt}, *messages]
+        if not has_system and self._default_system_prompt:
+            return [{"role": "system", "content": self._default_system_prompt}, *messages]
         return messages
 
     def _build_headers(self) -> dict:
-        if settings.llm_api_key:
-            return {"Authorization": f"Bearer {settings.llm_api_key}"}
+        if self._api_key:
+            return {"Authorization": f"Bearer {self._api_key}"}
         return {}
 
     async def chat_completions(
@@ -32,7 +49,7 @@ class LLMService:
         messages = self._inject_system_prompt(messages)
 
         payload = {
-            "model": model or settings.llm_model,
+            "model": model or self._model,
             "messages": messages,
             "temperature": temperature if temperature is not None else 0.1,
             "stream": False,
@@ -44,14 +61,20 @@ class LLMService:
 
         try:
             resp = await self._client.post(
-                f"{settings.llm_base_url}/chat/completions",
+                f"{self._base_url}/chat/completions",
                 json=payload,
                 headers=self._build_headers(),
             )
             resp.raise_for_status()
             return resp.json()
         except HTTPError as e:
+            status = e.response.status_code if e.response else 0
             detail = e.response.text[:500] if e.response else str(e)
-            raise RuntimeError(f"LLM backend error ({e.response.status_code}): {detail}")
+            logger.warning("LLM backend error %s: %.200s", status, detail)
+            raise RuntimeError(f"LLM backend error ({status}): {detail}")
+        except RequestError as e:
+            logger.error("LLM backend connection failed: %s", e)
+            raise RuntimeError(f"LLM backend unavailable: {e}") from e
         except Exception as e:
-            raise RuntimeError("LLM backend unavailable")
+            logger.error("LLM backend unexpected error: %s", e)
+            raise RuntimeError("LLM backend internal error") from e
