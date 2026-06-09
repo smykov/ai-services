@@ -1,6 +1,6 @@
 import logging
 
-from httpx import AsyncClient, HTTPError, RequestError
+from httpx import AsyncClient, HTTPError, HTTPStatusError, RequestError
 
 from .config import settings
 
@@ -67,14 +67,17 @@ class LLMService:
             )
             resp.raise_for_status()
             return resp.json()
-        except HTTPError as e:
-            status = e.response.status_code if e.response else 0
-            detail = e.response.text[:500] if e.response else str(e)
+        except HTTPStatusError as e:
+            status = e.response.status_code
+            detail = e.response.text[:500]
             logger.warning("LLM backend error %s: %.200s", status, detail)
             raise RuntimeError(f"LLM backend error ({status}): {detail}")
         except RequestError as e:
             logger.error("LLM backend connection failed: %s", e)
             raise RuntimeError(f"LLM backend unavailable: {e}") from e
+        except HTTPError as e:
+            logger.error("LLM backend error: %s", e)
+            raise RuntimeError(f"LLM backend error: {e}")
         except Exception as e:
             logger.error("LLM backend unexpected error: %s", e)
             raise RuntimeError("LLM backend internal error") from e
