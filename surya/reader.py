@@ -1,5 +1,5 @@
 from surya.model.detection.model import load_model as load_detection
-from surya.model.detection.processor import load_processor as load_det_processor
+from surya.model.detection.model import load_processor as load_det_processor
 from surya.model.recognition.model import load_model as load_recognition
 from surya.model.recognition.processor import load_processor as load_rec_processor
 from surya.ocr import run_ocr
