@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y python3-pip && rm -rf /var/lib/apt/list
 WORKDIR /app
 
 COPY surya/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --default-timeout=300 --no-cache-dir -r requirements.txt
 
 COPY surya/worker.py surya/reader.py ./
 COPY shared/ ./shared/
