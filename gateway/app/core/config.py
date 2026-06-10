@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     api_keys: set[str] = set()
     mcp_bearer_token: str | None = None
 
-    task_timeout: int = 60
+    task_timeout: int = 120
     task_result_ttl: int = 3600
 
     mcp_server_name: str = "ecosystem-ai-services"

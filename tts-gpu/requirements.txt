@@ -1,5 +1,7 @@
 TTS==0.22.0
 torch==2.4.0
+torchaudio==2.4.0
+transformers>=4.29.0,<4.44.0
 numpy>=1.22.0,<2.0
 redis==5.1.1
 minio==7.2.7
