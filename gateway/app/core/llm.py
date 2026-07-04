@@ -1,3 +1,5 @@
+import base64
+import json
 import logging
 
 from httpx import AsyncClient, HTTPError, HTTPStatusError, RequestError
@@ -5,6 +7,17 @@ from httpx import AsyncClient, HTTPError, HTTPStatusError, RequestError
 from .config import settings
 
 logger = logging.getLogger(__name__)
+
+_CLASSIFY_PROMPT = (
+    "Analyze this image and respond ONLY with valid JSON (no markdown, no explanation):\n"
+    '{"type": "receipt|document|person|other", "has_pii": true|false, "description": "brief 1-sentence description"}\n\n'
+    "Type definitions:\n"
+    '- "receipt": shopping receipt, invoice, payment bill\n'
+    '- "document": passport, ID card, contract, certificate, official form\n'
+    '- "person": photo containing a human face or full body\n'
+    '- "other": any other content\n\n'
+    "has_pii = true if image contains personal data: name, address, phone, ID number, face, signature, etc."
+)
 
 
 class LLMService:
@@ -81,3 +94,45 @@ class LLMService:
         except Exception as e:
             logger.error("LLM backend unexpected error: %s", e)
             raise RuntimeError("LLM backend internal error") from e
+
+    async def classify_image(
+        self,
+        image_bytes: bytes,
+        mime_type: str = "image/jpeg",
+    ) -> dict:
+        b64 = base64.b64encode(image_bytes).decode()
+        data_url = f"data:{mime_type};base64,{b64}"
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image_url", "image_url": {"url": data_url}},
+                    {"type": "text", "text": _CLASSIFY_PROMPT},
+                ],
+            }
+        ]
+        payload = {
+            "model": settings.vision_model,
+            "messages": messages,
+            "temperature": 0.1,
+            "stream": False,
+        }
+        try:
+            resp = await self._client.post(
+                f"{self._base_url}/chat/completions",
+                json=payload,
+                headers=self._build_headers(),
+            )
+            resp.raise_for_status()
+            raw = resp.json()["choices"][0]["message"]["content"]
+            raw = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            return json.loads(raw)
+        except HTTPStatusError as e:
+            logger.warning("Vision LLM error %s: %.200s", e.response.status_code, e.response.text)
+            raise RuntimeError(f"Vision LLM backend error ({e.response.status_code})") from e
+        except RequestError as e:
+            raise RuntimeError(f"Vision LLM unavailable: {e}") from e
+        except (json.JSONDecodeError, KeyError) as e:
+            raise RuntimeError(f"Vision LLM returned invalid JSON: {e}") from e
+        except Exception as e:
+            raise RuntimeError("Vision LLM internal error") from e

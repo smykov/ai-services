@@ -53,6 +53,50 @@ Response (200):
   {"audio_url": "http://...", "task_id": "..."}
 ```
 
+
+### Classify Image
+
+```
+POST /v1/classify
+
+Form params:
+  file  (file)  Image file (JPEG, PNG, WebP)
+
+Response (200):
+  {
+    "type":        "receipt" | "document" | "person" | "other",
+    "has_pii":     true | false,
+    "description": "Brief description of image content"
+  }
+
+type values:
+  receipt   Shopping receipt, invoice, payment bill
+  document  Passport, ID card, contract, certificate, official form
+  person    Photo containing a human face or full body
+  other     Any other content (product, screenshot, landscape, etc.)
+
+has_pii = true if the image contains personal data:
+  name, address, phone number, ID/passport number, face, signature
+
+Model: llava:7b (local Ollama, multimodal vision)
+
+Errors:
+  415  Unsupported image format (use JPEG, PNG, or WebP)
+  413  File too large
+  503  Vision model unavailable
+```
+
+**Example — curl:**
+```bash
+curl -X POST http://10.10.10.110:8000/v1/classify   -H "X-API-Key: <key>"   -F "file=@receipt.jpg"
+# → {"type":"receipt","has_pii":true,"description":"A store receipt showing customer name and items purchased."}
+```
+
+**Use as OCR pre-filter:**
+1. Call `/v1/classify` on the uploaded image
+2. If `has_pii=true` and type is `document` or `receipt` → decide: mask or reject
+3. Call `/v1/ocr` for text extraction (works regardless of classify result — fail-open)
+
 ### Extract Text (OCR)
 
 ```

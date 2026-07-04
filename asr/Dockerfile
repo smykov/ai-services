@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y python3.11 python3-pip ffmpeg && rm -rf
 WORKDIR /app
 
 COPY asr/requirements.txt .
-RUN pip install --default-timeout=300 --no-cache-dir -r requirements.txt
+RUN pip install --default-timeout=300 --no-cache-dir --index-url https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 COPY asr/worker.py asr/transcriber.py ./
 COPY shared/ ./shared/

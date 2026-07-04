@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from .core.container import container
 from .mcp.server import mcp_app
-from .routes import audio, chat, health, metrics, ocr, tasks
+from .routes import audio, chat, classify, health, metrics, ocr, tasks
 
 
 @asynccontextmanager
@@ -28,6 +28,7 @@ app.include_router(health.router)
 app.include_router(metrics.router)
 app.include_router(audio.router, prefix="/v1")
 app.include_router(chat.router, prefix="/v1")
+app.include_router(classify.router, prefix="/v1")
 app.include_router(ocr.router, prefix="/v1")
 app.include_router(tasks.router, prefix="/v1")
 app.mount("/mcp/", mcp_app)

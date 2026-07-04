@@ -1,10 +1,15 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+import asyncio
+import json
+import uuid
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
 from ..core.auth import verify_api_key
 from ..core.config import settings
-from ..core.minio import upload_file
-from ..core.redis import push_and_wait, push_task
+from ..core.container import container
+from ..core.minio import get_presigned_url, upload_file
+from ..core.redis import push_and_wait, push_task, _wait_for_message
 
 router = APIRouter(dependencies=[Depends(verify_api_key)], tags=["audio"])
 
@@ -21,55 +26,120 @@ class SpeechResponse(BaseModel):
 
 @router.post("/audio/transcriptions")
 async def transcribe_audio(
-    file: UploadFile = File(...),
-    language: str = Form("auto"),
-    model: str = Form("turbo"),
+    request: Request,
+    file: UploadFile = File(None),
+    language: str = Form(None),
+    model: str = Form(None),
     async_: bool = Form(False, alias="async"),
 ):
-    contents = await file.read()
-    if len(contents) > settings.max_upload_size_mb * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large")
+    content_type = request.headers.get("content-type", "").lower()
+    lang = "auto"
+    model_val = "turbo"
+    async_flag = False
 
-    object_name = await upload_file(contents, prefix="audio/")
+    if "application/json" in content_type:
+        body = await request.json()
+        lang = body.get("language", lang)
+        model_val = body.get("model", model_val)
+        async_flag = bool(body.get("async", False))
+        if not file and "file_url" in body:
+            pass
+    else:
+        if file is None:
+            raise HTTPException(status_code=422, detail="File field required")
+        lang = language or lang
+        model_val = model or model_val
+        async_flag = async_
 
-    if async_:
-        task_id = await push_task("asr:queue", {
-            "object_name": object_name,
-            "language": language,
-            "model": model,
-        })
-        return {"task_id": task_id, "status": "queued"}
+    if file:
+        contents = await file.read()
+        if len(contents) > settings.max_upload_size_mb * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="File too large")
+        object_name = await upload_file(contents, prefix="audio/")
+    else:
+        raise HTTPException(status_code=400, detail="No file provided")
 
-    result = await push_and_wait("asr:queue", {
+    payload = {
         "object_name": object_name,
-        "language": language,
-        "model": model,
-    })
-    if result is None:
-        raise HTTPException(status_code=504, detail="Task timeout")
-    return TranscriptionResponse(text=result.get("text", ""), task_id=result.get("task_id"))
+        "language": lang,
+        "model": model_val,
+    }
+
+    r = await container.redis
+    task_id = str(uuid.uuid4())
+    payload["task_id"] = task_id
+    channel = f"result:{task_id}"
+    pubsub = r.pubsub()
+    await pubsub.subscribe(channel)
+
+    try:
+        await r.xadd("asr:queue", payload, maxlen=1000)
+
+        if not async_flag:
+            try:
+                result = await asyncio.wait_for(
+                    _wait_for_message(pubsub),
+                    timeout=settings.task_timeout,
+                )
+                if result:
+                    data = json.loads(result["data"])
+                    return TranscriptionResponse(text=data.get("text", ""), task_id=task_id)
+            except asyncio.TimeoutError:
+                pass
+
+        return {"task_id": task_id, "status": "queued" if async_flag else "processing"}
+
+    finally:
+        await pubsub.unsubscribe(channel)
+        await pubsub.aclose()
 
 
 @router.post("/audio/speech")
-async def synthesize_speech(
-    text: str = Form(...),
-    voice: str = Form("default"),
-    model: str = Form("xtts-v2"),
-    async_: bool = Form(False, alias="async"),
-):
-    if async_:
-        task_id = await push_task("tts:queue", {
-            "text": text,
-            "voice": voice,
-            "model": model,
-        })
-        return {"task_id": task_id, "status": "queued"}
+async def synthesize_speech(request: Request):
+    content_type = request.headers.get("content-type", "").lower()
 
-    result = await push_and_wait("tts:queue", {
-        "text": text,
-        "voice": voice,
-        "model": model,
-    })
-    if result is None:
-        raise HTTPException(status_code=504, detail="Task timeout")
-    return SpeechResponse(audio_url=result.get("audio_url", ""), task_id=result.get("task_id"))
+    if "application/json" in content_type:
+        body = await request.json()
+    else:
+        form = await request.form()
+        body = {k: v for k, v in form.items()}
+
+    text = body.get("input", body.get("text"))
+    voice = body.get("voice", "default")
+    model_value = body.get("model", "xtts-v2")
+    async_flag = str(body.get("async", body.get("async_", "false"))).lower() in ("true", "1")
+
+    if not text:
+        raise HTTPException(status_code=422, detail="Field 'input' or 'text' is required")
+
+    payload = {"text": text, "voice": voice, "model": model_value}
+
+    r = await container.redis
+    task_id = str(uuid.uuid4())
+    payload["task_id"] = task_id
+    channel = f"result:{task_id}"
+    pubsub = r.pubsub()
+    await pubsub.subscribe(channel)
+
+    try:
+        await r.xadd("tts:queue", payload, maxlen=1000)
+
+        if not async_flag:
+            try:
+                result = await asyncio.wait_for(
+                    _wait_for_message(pubsub),
+                    timeout=settings.task_timeout,
+                )
+                if result:
+                    data = json.loads(result["data"])
+                    object_name = data.get("object_name", "")
+                    audio_url = get_presigned_url(object_name) if object_name else data.get("audio_url", "")
+                    return SpeechResponse(audio_url=audio_url, task_id=task_id)
+            except asyncio.TimeoutError:
+                pass
+
+        return {"task_id": task_id, "status": "queued" if async_flag else "processing"}
+
+    finally:
+        await pubsub.unsubscribe(channel)
+        await pubsub.aclose()
