@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from ..core.auth import verify_api_key
 from ..core.config import settings
 from ..core.container import container
+from ..core.http import read_json
 from ..core.minio import upload_file
 from ..core.redis import _wait_for_message
 
@@ -32,7 +33,7 @@ async def extract_text(
     async_flag = False
 
     if "application/json" in content_type:
-        body = await request.json()
+        body = await read_json(request)
         lang = body.get("languages", lang)
         async_flag = bool(body.get("async", False))
         if not file and "file_url" in body:

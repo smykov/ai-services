@@ -21,6 +21,27 @@ def _download_default_voice():
     return _DEFAULT_VOICE_PATH
 
 
+MODEL_ALIASES = {
+    "": "xtts-v2",
+    "default": "xtts-v2",
+    "tts-1": "xtts-v2",
+    "tts-1-hd": "xtts-v2",
+    "xtts": "xtts-v2",
+    "xtts-v2": "xtts-v2",
+    "xtts_v2": "xtts-v2",
+}
+
+
+def resolve_model(name: str) -> str:
+    """Map client-supplied model names (incl. OpenAI's tts-1) onto a real backend."""
+    resolved = MODEL_ALIASES.get((name or "").strip().lower())
+    if resolved is None:
+        raise ValueError(
+            f"Unknown TTS model {name!r}; supported: {sorted(set(MODEL_ALIASES) - {''})}"
+        )
+    return resolved
+
+
 def _load_model(name: str = "xtts-v2"):
     global _MODEL, _MODEL_NAME
     if _MODEL is None or _MODEL_NAME != name:
@@ -31,14 +52,19 @@ def _load_model(name: str = "xtts-v2"):
 
 
 def synthesize(text: str, voice: str = "default", model_name: str = "xtts-v2", language: str = "ru") -> str:
+    model_name = resolve_model(model_name)
     _load_model(model_name)
 
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
         output_path = f.name
 
-    if model_name == "xtts-v2":
-        speaker_wav = _download_default_voice() if voice == "default" else voice
-        _MODEL.tts_to_file(text=text, speaker_wav=speaker_wav, language=language, file_path=output_path)
+    # OpenAI-style voice names (alloy, nova, ...) are not speaker samples - only an
+    # existing wav path is used as a reference voice, anything else falls back.
+    speaker_wav = voice if voice and os.path.isfile(voice) else _download_default_voice()
+    _MODEL.tts_to_file(text=text, speaker_wav=speaker_wav, language=language, file_path=output_path)
+
+    if os.path.getsize(output_path) == 0:
+        os.unlink(output_path)
+        raise RuntimeError("TTS produced an empty audio file")
 
     return output_path
-

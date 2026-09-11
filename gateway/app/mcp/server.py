@@ -8,6 +8,7 @@ from starlette.routing import Route
 
 from ..core.auth import verify_mcp_token
 from ..core.config import settings
+from ..core.http import read_json
 from .tools import dispatch, list_tools
 
 
@@ -34,7 +35,7 @@ async def sse_endpoint(request):
 
 async def message_endpoint(request):
     await verify_mcp_token(request)
-    body = await request.json()
+    body = await read_json(request)
     method = body.get("method")
     msg_id = body.get("id")
 

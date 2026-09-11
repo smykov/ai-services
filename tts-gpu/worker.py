@@ -21,8 +21,9 @@ class TTSGPUWorker(WorkerBase):
         text = data["text"]
         voice = data.get("voice", "default")
         model = data.get("model", "xtts-v2")
+        language = data.get("language", "ru").split("-")[0].lower()
 
-        output_path = synthesize(text, voice=voice, model_name=model)
+        output_path = synthesize(text, voice=voice, model_name=model, language=language)
 
         object_name = f"tts/{data['task_id']}.wav"
         with open(output_path, "rb") as f:

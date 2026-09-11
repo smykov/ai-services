@@ -39,11 +39,13 @@ class WorkerBase:
         task_id = data["task_id"]
         try:
             result = await self.process(data)
-            await self._r.set(f"task:{task_id}", json.dumps(result), ex=self.result_ttl)
-            await self._r.publish(f"result:{task_id}", json.dumps(result))
-            await self._r.xack(self.queue_key, self.group_name, message_id)
         except Exception as e:
             print(f"Task {task_id} failed: {e}", flush=True)
+            result = {"error": str(e)}
+        try:
+            await self._r.set(f"task:{task_id}", json.dumps(result), ex=self.result_ttl)
+            await self._r.publish(f"result:{task_id}", json.dumps(result))
+        finally:
             await self._r.xack(self.queue_key, self.group_name, message_id)
 
     async def run(self):

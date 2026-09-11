@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from ..core.auth import verify_api_key
 from ..core.config import settings
 from ..core.container import container
+from ..core.http import read_json
 from ..core.minio import get_presigned_url, upload_file
 from ..core.redis import push_and_wait, push_task, _wait_for_message
 
@@ -38,7 +39,7 @@ async def transcribe_audio(
     async_flag = False
 
     if "application/json" in content_type:
-        body = await request.json()
+        body = await read_json(request)
         lang = body.get("language", lang)
         model_val = body.get("model", model_val)
         async_flag = bool(body.get("async", False))
@@ -99,7 +100,7 @@ async def synthesize_speech(request: Request):
     content_type = request.headers.get("content-type", "").lower()
 
     if "application/json" in content_type:
-        body = await request.json()
+        body = await read_json(request)
     else:
         form = await request.form()
         body = {k: v for k, v in form.items()}
@@ -107,12 +108,13 @@ async def synthesize_speech(request: Request):
     text = body.get("input", body.get("text"))
     voice = body.get("voice", "default")
     model_value = body.get("model", "xtts-v2")
+    language = body.get("language", body.get("locale", "ru"))
     async_flag = str(body.get("async", body.get("async_", "false"))).lower() in ("true", "1")
 
     if not text:
         raise HTTPException(status_code=422, detail="Field 'input' or 'text' is required")
 
-    payload = {"text": text, "voice": voice, "model": model_value}
+    payload = {"text": text, "voice": voice, "model": model_value, "language": language}
 
     r = await container.redis
     task_id = str(uuid.uuid4())
@@ -132,6 +134,8 @@ async def synthesize_speech(request: Request):
                 )
                 if result:
                     data = json.loads(result["data"])
+                    if data.get("error"):
+                        raise HTTPException(status_code=502, detail=f"TTS worker failed: {data['error']}")
                     object_name = data.get("object_name", "")
                     audio_url = get_presigned_url(object_name) if object_name else data.get("audio_url", "")
                     return SpeechResponse(audio_url=audio_url, task_id=task_id)
