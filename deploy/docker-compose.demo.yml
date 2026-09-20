@@ -55,6 +55,8 @@ services:
       dockerfile: asr/Dockerfile
     profiles:
       - gpu-workers
+    volumes:
+      - asr_models:/models
     deploy:
       resources:
         reservations:
@@ -154,3 +156,4 @@ volumes:
   redis_data:
   minio_data:
   ollama_data:
+  asr_models:

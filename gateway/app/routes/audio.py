@@ -15,9 +15,16 @@ from ..core.redis import push_and_wait, push_task, _wait_for_message
 router = APIRouter(dependencies=[Depends(verify_api_key)], tags=["audio"])
 
 
+class SpeakerEmbedding(BaseModel):
+    embedding: list[float]
+    seconds: float
+    reliable: bool
+
+
 class TranscriptionResponse(BaseModel):
     text: str
     task_id: str | None = None
+    speaker: SpeakerEmbedding | None = None
 
 
 class SpeechResponse(BaseModel):
@@ -31,18 +38,21 @@ async def transcribe_audio(
     file: UploadFile = File(None),
     language: str = Form(None),
     model: str = Form(None),
+    embed: bool = Form(False),
     async_: bool = Form(False, alias="async"),
 ):
     content_type = request.headers.get("content-type", "").lower()
     lang = "auto"
     model_val = "turbo"
     async_flag = False
+    embed_flag = False
 
     if "application/json" in content_type:
         body = await read_json(request)
         lang = body.get("language", lang)
         model_val = body.get("model", model_val)
         async_flag = bool(body.get("async", False))
+        embed_flag = bool(body.get("embed", False))
         if not file and "file_url" in body:
             pass
     else:
@@ -51,6 +61,7 @@ async def transcribe_audio(
         lang = language or lang
         model_val = model or model_val
         async_flag = async_
+        embed_flag = embed
 
     if file:
         contents = await file.read()
@@ -64,6 +75,7 @@ async def transcribe_audio(
         "object_name": object_name,
         "language": lang,
         "model": model_val,
+        "embed": "1" if embed_flag else "0",
     }
 
     r = await container.redis
@@ -84,7 +96,11 @@ async def transcribe_audio(
                 )
                 if result:
                     data = json.loads(result["data"])
-                    return TranscriptionResponse(text=data.get("text", ""), task_id=task_id)
+                    return TranscriptionResponse(
+                        text=data.get("text", ""),
+                        task_id=task_id,
+                        speaker=data.get("speaker"),
+                    )
             except asyncio.TimeoutError:
                 pass
 

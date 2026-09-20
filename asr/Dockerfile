@@ -7,7 +7,7 @@ WORKDIR /app
 COPY asr/requirements.txt .
 RUN pip install --default-timeout=300 --no-cache-dir --index-url https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
-COPY asr/worker.py asr/transcriber.py ./
+COPY asr/worker.py asr/transcriber.py asr/embedder.py ./
 COPY shared/ ./shared/
 
 CMD ["python3", "worker.py"]
