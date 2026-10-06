@@ -4,7 +4,7 @@ from app.core.config import Settings, settings
 def test_default_config():
     s = Settings()
     assert s.max_upload_size_mb == 100
-    assert s.task_timeout == 60
+    assert s.task_timeout == 120
     assert s.task_result_ttl == 3600
     assert s.api_keys == set()
     assert s.mcp_bearer_token is None
