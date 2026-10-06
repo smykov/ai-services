@@ -1,6 +1,7 @@
 import os
 import tempfile
 
+from embedder import embed
 from transcriber import transcribe
 from shared.minio_uploader import create_minio_client
 from shared.worker_base import WorkerBase
@@ -18,6 +19,7 @@ class ASRWorker(WorkerBase):
         object_name = data.get("object_name", "")
         language = data.get("language", "auto")
         model_name = data.get("model", "turbo")
+        want_embedding = str(data.get("embed", "")).lower() in ("1", "true", "yes")
 
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
             response = self._mc.get_object(
@@ -28,7 +30,10 @@ class ASRWorker(WorkerBase):
             audio_path = f.name
 
         try:
-            return transcribe(audio_path, language=language, model_name=model_name)
+            result = transcribe(audio_path, language=language, model_name=model_name)
+            if want_embedding:
+                result["speaker"] = embed(audio_path)
+            return result
         finally:
             os.unlink(audio_path)
 

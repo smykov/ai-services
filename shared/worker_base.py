@@ -39,11 +39,13 @@ class WorkerBase:
         task_id = data["task_id"]
         try:
             result = await self.process(data)
+        except Exception as e:
+            print(f"Task {task_id} failed: {e}", flush=True)
+            result = {"error": str(e)}
+        try:
             await self._r.set(f"task:{task_id}", json.dumps(result), ex=self.result_ttl)
             await self._r.publish(f"result:{task_id}", json.dumps(result))
-            await self._r.xack(self.queue_key, self.group_name, message_id)
-        except Exception as e:
-            print(f"Task {task_id} failed: {e}")
+        finally:
             await self._r.xack(self.queue_key, self.group_name, message_id)
 
     async def run(self):
@@ -55,7 +57,7 @@ class WorkerBase:
             except NotImplementedError:
                 pass
 
-        print(f"{self.consumer_name} started, waiting for tasks on {self.queue_key}...")
+        print(f"{self.consumer_name} started, waiting for tasks on {self.queue_key}...", flush=True)
 
         while not self._shutdown_event.is_set():
             try:
@@ -71,10 +73,10 @@ class WorkerBase:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                print(f"Error in main loop: {e}")
+                print(f"Error in main loop: {e}", flush=True)
                 await asyncio.sleep(1)
 
-        print(f"{self.consumer_name} shutting down...")
+        print(f"{self.consumer_name} shutting down...", flush=True)
         await self.disconnect()
 
     def start(self):

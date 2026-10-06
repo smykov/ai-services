@@ -25,7 +25,7 @@ def extract_text(image_path: str, languages: list[str] | None = None) -> dict:
     from PIL import Image
     image = Image.open(image_path)
 
-    langs = languages or ["en", "ru"]
+    langs = [languages or ["en", "ru"]]
     predictions = run_ocr(
         [image], langs, _det_model, _det_processor, _rec_model, _rec_processor
     )
@@ -46,3 +46,7 @@ def extract_text(image_path: str, languages: list[str] | None = None) -> dict:
         "text": "\n".join(all_text),
         "blocks": blocks,
     }
+
+# Preload models at import time so first OCR call doesn't cold-start
+_ensure_models()
+
