@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import binascii
 import json
 import uuid
 
@@ -111,7 +113,47 @@ async def transcribe_audio(
         await pubsub.aclose()
 
 
-@router.post("/audio/speech")
+_SPEECH_REQUEST_BODY = {
+    "required": True,
+    "content": {
+        "application/json": {
+            "schema": {
+                "type": "object",
+                "required": ["input"],
+                "properties": {
+    "input": {"type": "string", "description": "Text to synthesize (alias: text)"},
+    "voice": {"type": "string", "default": "default", "description": "Voice name; ignored by XTTS unless a speaker_wav is given"},
+    "model": {"type": "string", "default": "xtts-v2", "description": "TTS model (tts-1 / tts-1-hd are aliases of xtts-v2)"},
+    "language": {"type": "string", "default": "ru", "description": "Language code (alias: locale)"},
+    "async": {"type": "boolean", "default": False, "description": "Return task_id immediately instead of waiting"},
+    "speaker_wav": {"type": "string", "format": "byte", "description": "Reference voice sample for XTTS cloning, base64-encoded audio (wav)"},
+},
+            }
+        },
+        "multipart/form-data": {
+            "schema": {
+                "type": "object",
+                "required": ["input"],
+                "properties": {
+    "input": {"type": "string", "description": "Text to synthesize (alias: text)"},
+    "voice": {"type": "string", "default": "default", "description": "Voice name; ignored by XTTS unless a speaker_wav is given"},
+    "model": {"type": "string", "default": "xtts-v2", "description": "TTS model (tts-1 / tts-1-hd are aliases of xtts-v2)"},
+    "language": {"type": "string", "default": "ru", "description": "Language code (alias: locale)"},
+    "async": {"type": "boolean", "default": False, "description": "Return task_id immediately instead of waiting"},
+    "speaker_wav": {"type": "string", "format": "binary", "description": "Reference voice sample for XTTS cloning (wav file)"},
+},
+            }
+        },
+    },
+}
+
+
+@router.post(
+    "/audio/speech",
+    response_model=SpeechResponse,
+    summary="Synthesize speech (XTTS-v2), optionally cloning a voice from a sample",
+    openapi_extra={"requestBody": _SPEECH_REQUEST_BODY},
+)
 async def synthesize_speech(request: Request):
     content_type = request.headers.get("content-type", "").lower()
 
@@ -131,6 +173,22 @@ async def synthesize_speech(request: Request):
         raise HTTPException(status_code=422, detail="Field 'input' or 'text' is required")
 
     payload = {"text": text, "voice": voice, "model": model_value, "language": language}
+
+    # Reference voice for XTTS: multipart file `speaker_wav`, or base64 string in JSON/form.
+    sample = body.get("speaker_wav")
+    if sample is not None and sample != "":
+        if hasattr(sample, "read"):
+            sample_bytes = await sample.read()
+        else:
+            try:
+                sample_bytes = base64.b64decode(str(sample), validate=True)
+            except (binascii.Error, ValueError):
+                raise HTTPException(status_code=422, detail="'speaker_wav' must be a file or base64-encoded audio")
+        if not sample_bytes:
+            raise HTTPException(status_code=422, detail="'speaker_wav' is empty")
+        if len(sample_bytes) > settings.max_upload_size_mb * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="Speaker sample too large")
+        payload["speaker_object"] = await upload_file(sample_bytes, prefix="speaker/")
 
     r = await container.redis
     task_id = str(uuid.uuid4())

@@ -48,6 +48,11 @@ Form params:
   voice  (string)  Voice name (default: default)
   model  (string)  TTS model: xtts-v2, cosyvoice (default: xtts-v2)
   async  (bool)    Async mode (default: false)
+  speaker_wav  (file | base64 string)
+                   Reference voice sample for XTTS voice cloning (optional).
+                   multipart: file field; JSON/form: base64-encoded audio.
+                   Without it the default voice is used.
+                   Errors: 413 sample too large, 422 empty or invalid base64
 
 Response (200):
   {"audio_url": "http://...", "task_id": "..."}
