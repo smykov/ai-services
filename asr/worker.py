@@ -19,7 +19,7 @@ class ASRWorker(WorkerBase):
     async def process(self, data: dict) -> dict:
         object_name = data.get("object_name", "")
         language = data.get("language", "auto")
-        model_name = data.get("model", "turbo")
+        model_name = data.get("model")
         want_embedding = str(data.get("embed", "")).lower() in ("1", "true", "yes")
 
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
