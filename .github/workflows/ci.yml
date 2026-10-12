@@ -47,11 +47,21 @@ jobs:
           AI_MINIO_SECRET_KEY=minioadmin \
           python -m pytest tests/ -v
 
+  test-workers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest pytest-asyncio numpy redis
+      - run: python -m pytest asr/tests avatar/tests shared/tests -v
+
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [gateway, asr, tts-gpu, tts-cpu, surya]
+        service: [gateway, asr, tts-gpu, tts-cpu, surya, avatar]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx

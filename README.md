@@ -1,6 +1,6 @@
 # Ecosystem AI Services
 
-Monorepo for AI microservices (ASR, TTS, OCR) with MCP tool support and REST API.
+Monorepo for AI microservices (ASR, TTS, OCR, talking head) with MCP tool support and REST API.
 
 ## Services
 
@@ -11,6 +11,7 @@ Monorepo for AI microservices (ASR, TTS, OCR) with MCP tool support and REST API
 | **tts-gpu** | Yes | XTTS-v2 / CosyVoice | Text → speech (high quality) |
 | **tts-cpu** | No | Piper TTS | Text → speech (CPU scaling) |
 | **surya** | Optional | Surya OCR | Image → text + layout |
+| **avatar** | Yes | MuseTalk 1.5 + GFPGAN | Face video + speech → talking-head video |
 | **ollama** | Yes | Qwen2.5 7B | LLM inference (NLP, intent, chat) |
 
 ## Architecture
@@ -44,6 +45,7 @@ See [docs/REST-API.md](docs/REST-API.md) and [docs/MCP-PROTOCOL.md](docs/MCP-PRO
 ├── tts-gpu/          # GPU TTS worker (XTTS-v2)
 ├── tts-cpu/          # CPU TTS worker (Piper)
 ├── surya/            # Surya OCR worker
+├── avatar/           # Talking-head worker (MuseTalk lip-sync, GFPGAN)
 ├── shared/           # Common: WorkerBase, MinIO uploader
 ├── deploy/           # Docker Compose, systemd service
 └── .github/workflows/# CI + Deploy pipelines
@@ -68,6 +70,15 @@ All settings via environment variables with `AI_` prefix:
 | `AI_LLM_API_KEY` | `` | LLM API key (for cloud providers) |
 | `AI_LLM_MODEL` | `qwen2.5:7b` | LLM model name |
 | `AI_DEFAULT_NLP_SYSTEM_PROMPT` | `You are a helpful...` | Default system prompt injected when missing |
+
+## Talking head (avatar)
+
+`POST /v1/video/talking-head` lip-syncs a short face video (or a photo) to any speech audio — see [docs/REST-API.md](docs/REST-API.md#talking-head-video).
+
+- **GPU memory:** models load on the first task and leave the GPU after `AVATAR_IDLE_UNLOAD_S` idle seconds (default 300); renders run one at a time. Peak use is about 6–8 GB with restoration on.
+- **Speed:** a prepared face is cached by content hash (`face_id`), and only frames with speech go through the lip-sync network — pauses show cached idle frames, so long videos with pauses cost roughly their speaking time.
+- **Weights** are downloaded into the `avatar_models` volume on first start (about 4 GB) from their upstream sources and are not redistributed here: MuseTalk (MIT), sd-vae-ft-mse (CreativeML OpenRAIL-M), Whisper tiny (MIT), DWPose (Apache-2.0), face-parsing BiSeNet (MIT), GFPGAN (Apache-2.0). Check each license before commercial use.
+- **Consent:** use only faces of people who agreed to it, and do not present generated video as a real recording.
 
 ## Security
 

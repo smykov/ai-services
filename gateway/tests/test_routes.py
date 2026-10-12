@@ -68,3 +68,66 @@ async def test_file_too_large(client, monkeypatch):
         data={"async": "true"},
     )
     assert resp.status_code == 413
+
+
+@pytest.mark.asyncio
+async def test_talking_head_async_with_face(client):
+    resp = await client.post(
+        "/v1/video/talking-head",
+        headers=HEADERS,
+        files={"audio": ("a.wav", b"fake-audio", "audio/wav"), "face": ("f.mp4", b"fake-video", "video/mp4")},
+        data={"restore_weight": "0.5"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "queued"
+    assert "task_id" in data
+
+
+@pytest.mark.asyncio
+async def test_talking_head_reuses_face_id(client):
+    resp = await client.post(
+        "/v1/video/talking-head",
+        headers=HEADERS,
+        files={"audio": ("a.wav", b"fake-audio", "audio/wav")},
+        data={"face_id": "0123456789abcdef0123456789abcdef"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "queued"
+
+
+@pytest.mark.asyncio
+async def test_talking_head_requires_face(client):
+    resp = await client.post(
+        "/v1/video/talking-head",
+        headers=HEADERS,
+        files={"audio": ("a.wav", b"fake-audio", "audio/wav")},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field,value", [("face_id", "../etc"), ("restore_weight", "1.5"), ("parsing_mode", "nose")])
+async def test_talking_head_rejects_bad_options(client, field, value):
+    data = {"face_id": "0123456789abcdef0123456789abcdef", field: value}
+    resp = await client.post(
+        "/v1/video/talking-head",
+        headers=HEADERS,
+        files={"audio": ("a.wav", b"fake-audio", "audio/wav")},
+        data=data,
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_task_reports_progress_before_result(client):
+    from app.core.container import container
+
+    r = await container.redis
+    await r.set("task:progress-test:progress", '{"stage": "rendering", "frames_done": 10}', ex=60)
+    resp = await client.get("/v1/tasks/progress-test", headers=HEADERS)
+    await r.delete("task:progress-test:progress")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "processing"
+    assert data["progress"]["frames_done"] == 10

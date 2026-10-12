@@ -79,6 +79,29 @@ services:
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
 
+  avatar:
+    image: ghcr.io/ecosystem/avatar:${IMAGE_TAG:-latest}
+    restart: always
+    volumes:
+      - avatar_models:/models
+      - avatar_cache:/cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ai-services
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+
   tts-cpu:
     image: ghcr.io/ecosystem/tts-cpu:${IMAGE_TAG:-latest}
     restart: always
@@ -108,5 +131,7 @@ services:
       minio: { condition: service_healthy }
 
 volumes:
+  avatar_models:
+  avatar_cache:
   redis_data:
   minio_data:
