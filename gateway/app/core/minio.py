@@ -27,5 +27,6 @@ def get_presigned_url(object_name: str, expires: int = 3600) -> str:
         access_key=settings.minio_access_key,
         secret_key=settings.minio_secret_key,
         secure=settings.minio_secure,
+        region=settings.minio_region,
     )
     return mc.presigned_get_object(settings.minio_bucket, object_name, expires=timedelta(seconds=expires))

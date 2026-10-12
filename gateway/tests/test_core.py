@@ -130,3 +130,14 @@ async def test_llm_chat_completions_default_model(monkeypatch):
     monkeypatch.setattr(svc._client, "post", capturing_post)
     await svc.chat_completions([{"role": "user", "content": "hi"}])
     assert captured["model"] == "qwen2.5:7b"
+
+
+def test_presigned_url_uses_public_endpoint_offline(monkeypatch):
+    from app.core.minio import get_presigned_url
+
+    # Unreachable host: presigning must not try to look up the bucket region.
+    monkeypatch.setattr(settings, "minio_public_endpoint", "10.255.255.1:9000")
+    url = get_presigned_url("avatar/x.mp4")
+    assert url.startswith("http://10.255.255.1:9000/")
+    assert "avatar/x.mp4" in url
+    assert "X-Amz-Signature=" in url
