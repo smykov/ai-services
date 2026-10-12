@@ -1,9 +1,8 @@
-from fastapi import HTTPException
-from httpx import ConnectError, HTTPStatusError, Request
 import pytest
-
 from app.core.auth import verify_api_key
 from app.core.config import settings
+from fastapi import HTTPException
+from httpx import ConnectError, HTTPStatusError, Request
 
 
 @pytest.mark.asyncio

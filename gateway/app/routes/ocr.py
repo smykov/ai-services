@@ -78,7 +78,7 @@ async def extract_text(
                         blocks=data.get("blocks"),
                         task_id=task_id,
                     )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
         return {"task_id": task_id, "status": "queued" if async_flag else "processing"}

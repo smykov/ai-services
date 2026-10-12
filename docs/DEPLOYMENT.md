@@ -13,7 +13,7 @@ docker compose -f deploy/docker-compose.demo.yml up -d gateway asr tts-gpu surya
 docker compose -f deploy/docker-compose.demo.yml --profile cpu-tts up -d
 ```
 
-## VM 110 (RTX 3090 Demo)
+## Demo GPU VM (RTX 3090)
 
 ### Prerequisites
 
@@ -39,16 +39,16 @@ docker compose -f deploy/docker-compose.demo.yml up -d
 
 1. Push tag `v*` triggers GitHub Actions
 2. Build matrix: all 5 services → `ghcr.io/ecosystem/{service}:v*`
-3. Deploy job (self-hosted runner on VM 105):
-   - SSH jump via Proxmox → VM 110
+3. Deploy job (self-hosted runner):
+   - SSH jump via the hypervisor host → GPU VM
    - `docker compose pull && up -d`
 
 ### Required Secrets
 
 | Secret | Description |
 |--------|-------------|
-| `PROXMOX_HOST` | `root@192.168.0.2` (jump host) |
-| `VM110_HOST` | `root@10.10.10.110` |
+| `PROXMOX_HOST` | SSH jump host, e.g. `root@<proxmox-host>` |
+| `VM110_HOST` | Target VM, e.g. `root@<gpu-vm>` |
 | `DEMO_SSH_KEY` | Private key for SSH auth |
 
 ## Production (Cloud)

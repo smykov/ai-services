@@ -4,7 +4,7 @@
 
 | Stage | Configuration |
 |-------|--------------|
-| **Demo** | 1 machine, all services (VM 110, RTX 3090) |
+| **Demo** | 1 machine, all services (GPU VM, RTX 3090) |
 | **Staging** | 2 GPU servers (A10G) |
 | **Production** | K8s cluster + GPU pool + CPU spot |
 

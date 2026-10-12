@@ -1,7 +1,6 @@
 import asyncio
 
 import pytest
-
 from app.mcp.tools import dispatch, list_tools
 
 

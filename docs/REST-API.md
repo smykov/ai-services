@@ -93,7 +93,7 @@ Errors:
 
 **Example — curl:**
 ```bash
-curl -X POST http://10.10.10.110:8000/v1/classify   -H "X-API-Key: <key>"   -F "file=@receipt.jpg"
+curl -X POST http://localhost:8000/v1/classify   -H "X-API-Key: <key>"   -F "file=@receipt.jpg"
 # → {"type":"receipt","has_pii":true,"description":"A store receipt showing customer name and items purchased."}
 ```
 

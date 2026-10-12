@@ -53,7 +53,7 @@ Server-Sent Events (SSE) according to MCP specification:
     "name": "preprocess_query",
     "arguments": {
       "messages": [
-        {"role": "user", "content": "analyze this request: check VM 105 status"}
+        {"role": "user", "content": "analyze this request: check server status"}
       ],
       "temperature": 0.1
     }

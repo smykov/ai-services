@@ -1,9 +1,9 @@
 import os
 
-from shared.minio_uploader import create_minio_client, ensure_bucket
-from shared.worker_base import WorkerBase
 from synthesizer import synthesize
 
+from shared.minio_uploader import create_minio_client, ensure_bucket
+from shared.worker_base import WorkerBase
 
 BUCKET = os.environ.get("MINIO_BUCKET", "ai-services")
 

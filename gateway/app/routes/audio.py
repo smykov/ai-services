@@ -12,7 +12,7 @@ from ..core.config import settings
 from ..core.container import container
 from ..core.http import read_json
 from ..core.minio import get_presigned_url, upload_file
-from ..core.redis import push_and_wait, push_task, _wait_for_message
+from ..core.redis import _wait_for_message
 
 router = APIRouter(dependencies=[Depends(verify_api_key)], tags=["audio"])
 
@@ -103,7 +103,7 @@ async def transcribe_audio(
                         task_id=task_id,
                         speaker=data.get("speaker"),
                     )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
         return {"task_id": task_id, "status": "queued" if async_flag else "processing"}
@@ -126,7 +126,7 @@ _SPEECH_REQUEST_BODY = {
     "model": {"type": "string", "default": "xtts-v2", "description": "TTS model (tts-1 / tts-1-hd are aliases of xtts-v2)"},
     "language": {"type": "string", "default": "ru", "description": "Language code (alias: locale)"},
     "async": {"type": "boolean", "default": False, "description": "Return task_id immediately instead of waiting"},
-    "speaker_wav": {"type": "string", "format": "byte", "description": "Reference voice sample for XTTS cloning, base64-encoded audio (wav)"},
+    "speaker_wav": {"type": "string", "format": "byte", "description": "Voice sample for XTTS cloning, base64-encoded wav"},
 },
             }
         },
@@ -213,7 +213,7 @@ async def synthesize_speech(request: Request):
                     object_name = data.get("object_name", "")
                     audio_url = get_presigned_url(object_name) if object_name else data.get("audio_url", "")
                     return SpeechResponse(audio_url=audio_url, task_id=task_id)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
         return {"task_id": task_id, "status": "queued" if async_flag else "processing"}

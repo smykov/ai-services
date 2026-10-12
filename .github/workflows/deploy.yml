@@ -48,7 +48,7 @@ jobs:
     runs-on: [self-hosted, proxmox, linux]
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to VM 110 via jump host
+      - name: Deploy to the GPU VM via jump host
         env:
           SSH_KEY: ${{ secrets.DEMO_SSH_KEY }}
           PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}

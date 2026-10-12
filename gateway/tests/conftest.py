@@ -1,9 +1,8 @@
 import pytest
-from httpx import ASGITransport, AsyncClient
-
 from app.core.config import settings
 from app.core.container import container
 from app.main import app
+from httpx import ASGITransport, AsyncClient
 
 
 @pytest.fixture(autouse=True)

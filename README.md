@@ -44,7 +44,6 @@ See [docs/REST-API.md](docs/REST-API.md) and [docs/MCP-PROTOCOL.md](docs/MCP-PRO
 ├── tts-gpu/          # GPU TTS worker (XTTS-v2)
 ├── tts-cpu/          # CPU TTS worker (Piper)
 ├── surya/            # Surya OCR worker
-├── nlp/              # NLP worker (optional Redis-based)
 ├── shared/           # Common: WorkerBase, MinIO uploader
 ├── deploy/           # Docker Compose, systemd service
 └── .github/workflows/# CI + Deploy pipelines
@@ -70,6 +69,10 @@ All settings via environment variables with `AI_` prefix:
 | `AI_LLM_MODEL` | `qwen2.5:7b` | LLM model name |
 | `AI_DEFAULT_NLP_SYSTEM_PROMPT` | `You are a helpful...` | Default system prompt injected when missing |
 
+## Security
+
+Authentication is off when `AI_API_KEYS` and `AI_MCP_BEARER_TOKEN` are empty, which is the demo default. Set both before exposing the gateway beyond localhost, and change the MinIO credentials from `minioadmin`.
+
 ## Development
 
 ```bash
@@ -83,3 +86,7 @@ cd gateway && AI_REDIS_URL=redis://localhost:6379/0 uvicorn app.main:app --reloa
 pip install pytest httpx
 pytest gateway/tests/ -v
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).

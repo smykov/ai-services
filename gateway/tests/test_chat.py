@@ -59,8 +59,8 @@ async def test_chat_completions_injects_system_prompt(client, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_inject_system_prompt_applied():
-    from app.core.llm import LLMService
     from app.core.config import settings
+    from app.core.llm import LLMService
 
     svc = LLMService()
     result = svc._inject_system_prompt([{"role": "user", "content": "hi"}])

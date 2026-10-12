@@ -3,6 +3,7 @@ import tempfile
 
 from embedder import embed
 from transcriber import transcribe
+
 from shared.minio_uploader import create_minio_client
 from shared.worker_base import WorkerBase
 
