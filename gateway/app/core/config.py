@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     minio_secret_key: str = "minioadmin"
     minio_bucket: str = "ai-services"
     minio_secure: bool = False
+    # Fixed region: presigning then needs no network call to the (public) endpoint.
+    minio_region: str = "us-east-1"
 
     database_url: str | None = None
 
