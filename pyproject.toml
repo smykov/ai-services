@@ -12,3 +12,4 @@ ignore = ["N999"]
 [tool.pytest.ini_options]
 testpaths = ["gateway/tests", "shared/tests"]
 asyncio_mode = "auto"
+markers = ["real_llm: run against the real LLMService.chat_completions instead of the autouse mock"]

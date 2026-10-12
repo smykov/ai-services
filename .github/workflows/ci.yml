@@ -25,15 +25,15 @@ jobs:
         image: redis:7-alpine
         ports:
           - 6379:6379
-      minio:
-        image: minio/minio:latest
-        ports:
-          - 9000:9000
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-        command: server /data
     steps:
+      # minio/minio is no longer published on Docker Hub; pgsty/minio is a drop-in build.
+      # Started as a step because service containers cannot pass `server /data`.
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+            pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data
+          for i in $(seq 30); do curl -sf http://localhost:9000/minio/health/live && break; sleep 1; done
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:

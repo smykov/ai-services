@@ -30,8 +30,9 @@ class TranscriptionResponse(BaseModel):
 
 
 class SpeechResponse(BaseModel):
-    audio_url: str
+    audio_url: str | None = None
     task_id: str | None = None
+    status: str | None = None
 
 
 @router.post("/audio/transcriptions")
@@ -151,6 +152,7 @@ _SPEECH_REQUEST_BODY = {
 @router.post(
     "/audio/speech",
     response_model=SpeechResponse,
+    response_model_exclude_none=True,
     summary="Synthesize speech (XTTS-v2), optionally cloning a voice from a sample",
     openapi_extra={"requestBody": _SPEECH_REQUEST_BODY},
 )
@@ -216,7 +218,7 @@ async def synthesize_speech(request: Request):
             except TimeoutError:
                 pass
 
-        return {"task_id": task_id, "status": "queued" if async_flag else "processing"}
+        return SpeechResponse(task_id=task_id, status="queued" if async_flag else "processing")
 
     finally:
         await pubsub.unsubscribe(channel)

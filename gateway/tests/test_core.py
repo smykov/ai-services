@@ -33,7 +33,7 @@ from app.core.llm import LLMService
 async def mock_response(status_code: int = 200, text: str = '{"ok": true}'):
     """Build a minimal httpx Response-like object for testing."""
     from httpx import Response
-    return Response(status_code=status_code, text=text)
+    return Response(status_code=status_code, text=text, request=Request("POST", "http://test"))
 
 
 def test_llm_build_headers_with_key():
@@ -70,6 +70,7 @@ def test_llm_inject_system_prompt_empty_disabled():
     assert len(result) == 1
 
 
+@pytest.mark.real_llm
 @pytest.mark.asyncio
 async def test_llm_chat_completions_http_error(monkeypatch):
     svc = LLMService(base_url="http://test", api_key="")
@@ -84,6 +85,7 @@ async def test_llm_chat_completions_http_error(monkeypatch):
         await svc.chat_completions([{"role": "user", "content": "hi"}])
 
 
+@pytest.mark.real_llm
 @pytest.mark.asyncio
 async def test_llm_chat_completions_connect_error(monkeypatch):
     svc = LLMService(base_url="http://test", api_key="")
@@ -96,6 +98,7 @@ async def test_llm_chat_completions_connect_error(monkeypatch):
         await svc.chat_completions([{"role": "user", "content": "hi"}])
 
 
+@pytest.mark.real_llm
 @pytest.mark.asyncio
 async def test_llm_chat_completions_model_override(monkeypatch):
     svc = LLMService(base_url="http://test", model="qwen2.5:7b")
@@ -112,6 +115,7 @@ async def test_llm_chat_completions_model_override(monkeypatch):
     assert captured["model"] == "gpt-4"
 
 
+@pytest.mark.real_llm
 @pytest.mark.asyncio
 async def test_llm_chat_completions_default_model(monkeypatch):
     svc = LLMService(base_url="http://test", model="qwen2.5:7b")

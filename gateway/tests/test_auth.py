@@ -9,8 +9,9 @@ async def test_health_no_auth(client):
 
 @pytest.mark.asyncio
 async def test_audio_missing_api_key(client):
+    # Auth runs before body validation, so a request without a key is rejected first.
     resp = await client.post("/v1/audio/transcriptions")
-    assert resp.status_code == 422
+    assert resp.status_code == 401
 
 
 @pytest.mark.asyncio

@@ -38,7 +38,9 @@ def patch_settings(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def mock_llm(monkeypatch):
+def mock_llm(request, monkeypatch):
+    if request.node.get_closest_marker("real_llm"):
+        return
     async def mock_chat_completions(self, messages, **kwargs):
         return {
             "id": "chatcmpl-test",
