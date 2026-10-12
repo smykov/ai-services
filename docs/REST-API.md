@@ -59,6 +59,45 @@ Response (200):
 ```
 
 
+### Talking-head video
+
+```
+POST /v1/video/talking-head   (multipart/form-data)
+
+Form params:
+  audio              (file)    Speech to lip-sync; any format ffmpeg reads (required)
+  face               (file)    Face video or photo: looking at the camera, mouth closed;
+                               the first 30 s are used, played forward and backward in a loop
+  face_id            (string)  Reuse a face prepared by an earlier call (returned in the result)
+                               instead of uploading `face` again — one of the two is required
+  restore            (bool)    Restore the face with GFPGAN (default: true) — sharper mouth and beard
+  restore_weight     (float)   GFPGAN strength 0..1 (default: 0.5); higher is sharper, skin gets smoother
+  parsing_mode       (string)  Blend border: jaw | raw (default: jaw)
+  left_cheek_width   (int)     Cheek width of the blended area, 0..200 (default: 90)
+  right_cheek_width  (int)     (default: 90)
+  extra_margin       (int)     Extra pixels below the chin, 0..60 (default: 10)
+  max_side           (int)     Longer side of the output, 256..1920 px (default: 720)
+  async              (bool)    Return task_id immediately (default: true)
+
+Response (async):
+  {"task_id": "...", "status": "queued"}
+
+GET /v1/tasks/{task_id} while rendering:
+  {"task_id": "...", "status": "processing",
+   "progress": {"stage": "rendering", "frames_done": 1200, "frames_total": 4500, "elapsed_s": 61.0}}
+
+GET /v1/tasks/{task_id} when done:
+  {"status": "completed", "result": {"object_name": "avatar/<task_id>.mp4", "face_id": "<32 hex>",
+   "frames": 4500, "speech_frames": 2100, "seconds": 180.0, "width": 720, "height": 720, "render_s": 240.5}}
+GET /v1/tasks/{task_id}/download → {"download_url": "..."}   (MP4, H.264 + AAC, 25 fps)
+
+Errors: 413 file too large, 422 neither face nor face_id / invalid option,
+        502 worker failed (sync mode); in async mode a failure is {"result": {"error": "..."}}
+```
+
+Face preparation (landmarks, masks, idle frames) takes about a minute and is cached per face and
+option set; the result's `face_id` skips it on later calls. Results are kept for 24 hours.
+
 ### Classify Image
 
 ```

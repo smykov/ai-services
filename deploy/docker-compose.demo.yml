@@ -97,6 +97,33 @@ services:
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
 
+  avatar:
+    build:
+      context: ../
+      dockerfile: avatar/Dockerfile
+    profiles:
+      - gpu-workers
+    volumes:
+      - avatar_models:/models
+      - avatar_cache:/cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: ai-services
+      AVATAR_IDLE_UNLOAD_S: "300"
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+
   tts-cpu:
     build:
       context: ../
@@ -157,3 +184,5 @@ volumes:
   minio_data:
   ollama_data:
   asr_models:
+  avatar_models:
+  avatar_cache:

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..core.auth import verify_api_key
 from ..core.minio import get_presigned_url
-from ..core.redis import get_task_result
+from ..core.redis import get_task_progress, get_task_result
 
 router = APIRouter(dependencies=[Depends(verify_api_key)], tags=["tasks"])
 
@@ -11,7 +11,11 @@ router = APIRouter(dependencies=[Depends(verify_api_key)], tags=["tasks"])
 async def get_task(task_id: str):
     result = await get_task_result(task_id)
     if result is None:
-        raise HTTPException(status_code=404, detail="Task not found")
+        # Long-running workers (avatar) report progress while the result is not there yet.
+        progress = await get_task_progress(task_id)
+        if progress is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return {"task_id": task_id, "status": "processing", "progress": progress}
     return {"task_id": task_id, "status": "completed", "result": result}
 
 

@@ -57,3 +57,11 @@ async def get_task_result(task_id: str) -> dict | None:
     if data is None:
         return None
     return json.loads(data)
+
+
+async def get_task_progress(task_id: str) -> dict | None:
+    r = await container.redis
+    data = await r.get(f"task:{task_id}:progress")
+    if data is None:
+        return None
+    return json.loads(data)

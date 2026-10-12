@@ -10,6 +10,6 @@ ignore = ["N999"]
 "**/tests/*" = ["E402"]
 
 [tool.pytest.ini_options]
-testpaths = ["gateway/tests", "shared/tests"]
+testpaths = ["gateway/tests", "shared/tests", "asr/tests", "avatar/tests"]
 asyncio_mode = "auto"
 markers = ["real_llm: run against the real LLMService.chat_completions instead of the autouse mock"]
