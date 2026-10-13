@@ -155,6 +155,10 @@ services:
               capabilities: [gpu]
     environment:
       OLLAMA_HOST: 0.0.0.0
+      # The GPU is shared with ASR/TTS/OCR/avatar. With the default 32k context qwen2.5vl:7b
+      # does not fit the free VRAM, falls back to CPU and fails on system memory.
+      OLLAMA_CONTEXT_LENGTH: 4096
+      OLLAMA_FLASH_ATTENTION: 1
 
   # Pulls the gateway's models into the ollama service's own volume. The host may run a
   # separate Ollama with other models; the gateway never sees it.
