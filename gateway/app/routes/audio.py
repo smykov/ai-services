@@ -99,6 +99,8 @@ async def transcribe_audio(
                 )
                 if result:
                     data = json.loads(result["data"])
+                    if data.get("error"):
+                        raise HTTPException(status_code=502, detail=f"ASR worker failed: {data['error']}")
                     return TranscriptionResponse(
                         text=data.get("text", ""),
                         task_id=task_id,
