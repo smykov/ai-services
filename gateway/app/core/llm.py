@@ -128,8 +128,10 @@ class LLMService:
             raw = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
             return json.loads(raw)
         except HTTPStatusError as e:
-            logger.warning("Vision LLM error %s: %.200s", e.response.status_code, e.response.text)
-            raise RuntimeError(f"Vision LLM backend error ({e.response.status_code})") from e
+            status = e.response.status_code
+            detail = e.response.text[:500]
+            logger.warning("Vision LLM error %s: %.200s", status, detail)
+            raise RuntimeError(f"Vision LLM backend error ({status}): {detail}") from e
         except RequestError as e:
             raise RuntimeError(f"Vision LLM unavailable: {e}") from e
         except (json.JSONDecodeError, KeyError) as e:

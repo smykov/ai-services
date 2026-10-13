@@ -122,7 +122,7 @@ type values:
 has_pii = true if the image contains personal data:
   name, address, phone number, ID/passport number, face, signature
 
-Model: llava:7b (local Ollama, multimodal vision)
+Model: qwen2.5vl:7b (local Ollama, multimodal vision; set by `AI_VISION_MODEL`)
 
 Errors:
   415  Unsupported image format (use JPEG, PNG, or WebP)
