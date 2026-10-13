@@ -270,3 +270,18 @@ async def test_chat_completions_no_temperature_default(client, monkeypatch):
         json={"messages": [{"role": "user", "content": "Hi"}]},
     )
     assert received["temperature"] is None
+
+
+@pytest.mark.asyncio
+async def test_classify_image_backend_error_includes_detail():
+    import httpx
+    from app.core.llm import LLMService
+
+    def handler(request):
+        return httpx.Response(404, json={"error": {"message": "model 'qwen2.5vl:7b' not found"}})
+
+    svc = LLMService(base_url="http://ollama:11434/v1")
+    svc._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    with pytest.raises(RuntimeError, match=r"Vision LLM backend error \(404\): .*model 'qwen2\.5vl:7b' not found"):
+        await svc.classify_image(b"\x89PNG", "image/png")
+    await svc.close()
