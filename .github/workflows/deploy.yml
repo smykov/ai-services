@@ -53,17 +53,6 @@ jobs:
     concurrency: deploy-demo
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to the GPU VM through the hypervisor host
-        env:
-          SSH_KEY: ${{ secrets.DEMO_SSH_KEY }}
-          PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
-          VM110_HOST: ${{ secrets.VM110_HOST }}
-        run: |
-          install -m 700 -d ~/.ssh
-          key=~/.ssh/ai_services_deploy
-          printf '%s\n' "$SSH_KEY" > "$key"
-          chmod 600 "$key"
-          trap 'rm -f "$key"' EXIT
-          # Two hops: the VM trusts the hypervisor's own key, not the deploy key.
-          ssh -i "$key" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@"$PROXMOX_HOST" \
-            "ssh -o BatchMode=yes root@$VM110_HOST bash -s -- $GITHUB_SHA" < deploy/deploy-demo.sh
+      # "ai-services-vm" is a Host alias in the runner user's ~/.ssh/config (address, user, key).
+      - name: Deploy to the GPU VM
+        run: ssh -o BatchMode=yes ai-services-vm bash -s -- "$GITHUB_SHA" < deploy/deploy-demo.sh

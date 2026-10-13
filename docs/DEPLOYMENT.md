@@ -40,18 +40,22 @@ docker compose -f deploy/docker-compose.demo.yml up -d
 1. Push a `v*` tag (or run the workflow by hand) to trigger `Deploy`
 2. Build matrix: all 6 services → `ghcr.io/<owner>/ai-services-{service}:v*` (used by the cloud compose)
 3. Deploy job (self-hosted runner labelled `self-hosted, proxmox, linux`):
-   - SSH to the hypervisor host, from there to the GPU VM with the hypervisor's own key
-   - runs `deploy/deploy-demo.sh <sha>` on the VM: `git checkout <sha>` in
-     `/opt/ecosystem-ai-services`, then `docker compose --profile gpu-workers up -d --build`
+   - `ssh ai-services-vm`, then runs `deploy/deploy-demo.sh <sha>` on the VM: `git checkout <sha>`
+     in `/opt/ecosystem-ai-services`, then `docker compose --profile gpu-workers up -d --build`
      from `deploy/`, then waits for `/health`
 
-### Required Secrets
+### Runner setup
 
-| Secret | Description |
-|--------|-------------|
-| `PROXMOX_HOST` | Hypervisor host or IP (no `root@`) |
-| `VM110_HOST` | GPU VM host or IP, as reached from the hypervisor (no `root@`) |
-| `DEMO_SSH_KEY` | Private key the runner uses for `root@PROXMOX_HOST` |
+No repository secrets. The runner user's `~/.ssh/config` defines the target, and the VM's
+`/root/.ssh/authorized_keys` holds the runner's public key:
+
+```
+Host ai-services-vm
+  HostName <gpu-vm>
+  User root
+  IdentityFile ~/.ssh/<runner key>
+  StrictHostKeyChecking accept-new
+```
 
 ## Production (Cloud)
 
