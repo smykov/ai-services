@@ -73,6 +73,8 @@ async def extract_text(
                 )
                 if result:
                     data = json.loads(result["data"])
+                    if data.get("error"):
+                        raise HTTPException(status_code=502, detail=f"OCR worker failed: {data['error']}")
                     return OCRResponse(
                         text=data.get("text", ""),
                         blocks=data.get("blocks"),

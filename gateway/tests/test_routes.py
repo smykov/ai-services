@@ -131,3 +131,50 @@ async def test_task_reports_progress_before_result(client):
     data = resp.json()
     assert data["status"] == "processing"
     assert data["progress"]["frames_done"] == 10
+
+
+class _FakePubSub:
+    async def subscribe(self, channel):
+        pass
+
+    async def unsubscribe(self, channel):
+        pass
+
+    async def aclose(self):
+        pass
+
+
+class _FakeRedis:
+    def pubsub(self):
+        return _FakePubSub()
+
+    async def xadd(self, *args, **kwargs):
+        pass
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("module", "url", "worker"),
+    [("audio", "/v1/audio/transcriptions", "ASR"), ("ocr", "/v1/ocr", "OCR")],
+)
+async def test_sync_worker_error_returns_502(client, monkeypatch, module, url, worker):
+    """A failed worker task must surface as 502, not as 200 with empty text."""
+    import json
+
+    from app.core.container import container
+
+    async def fake_redis():
+        return _FakeRedis()
+
+    async def fake_upload(*args, **kwargs):
+        return "obj"
+
+    async def fake_wait(pubsub):
+        return {"data": json.dumps({"error": "CUDA out of memory"})}
+
+    monkeypatch.setattr(type(container), "redis", property(lambda self: fake_redis()))
+    monkeypatch.setattr(f"app.routes.{module}.upload_file", fake_upload)
+    monkeypatch.setattr(f"app.routes.{module}._wait_for_message", fake_wait)
+    resp = await client.post(url, headers=HEADERS, files={"file": ("f.bin", b"data", "application/octet-stream")})
+    assert resp.status_code == 502
+    assert f"{worker} worker failed: CUDA out of memory" in resp.json()["detail"]
