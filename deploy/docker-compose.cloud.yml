@@ -23,7 +23,7 @@ services:
       retries: 5
 
   gateway:
-    image: ghcr.io/ecosystem/gateway:${IMAGE_TAG:-latest}
+    image: ghcr.io/smykov/ai-services-gateway:${IMAGE_TAG:-latest}
     ports:
       - "80:8000"
     restart: always
@@ -40,7 +40,7 @@ services:
       minio: { condition: service_healthy }
 
   asr:
-    image: ghcr.io/ecosystem/asr:${IMAGE_TAG:-latest}
+    image: ghcr.io/smykov/ai-services-asr:${IMAGE_TAG:-latest}
     restart: always
     deploy:
       resources:
@@ -60,7 +60,7 @@ services:
       minio: { condition: service_healthy }
 
   tts-gpu:
-    image: ghcr.io/ecosystem/tts-gpu:${IMAGE_TAG:-latest}
+    image: ghcr.io/smykov/ai-services-tts-gpu:${IMAGE_TAG:-latest}
     restart: always
     deploy:
       resources:
@@ -80,7 +80,7 @@ services:
       minio: { condition: service_healthy }
 
   avatar:
-    image: ghcr.io/ecosystem/avatar:${IMAGE_TAG:-latest}
+    image: ghcr.io/smykov/ai-services-avatar:${IMAGE_TAG:-latest}
     restart: always
     volumes:
       - avatar_models:/models
@@ -103,7 +103,7 @@ services:
       minio: { condition: service_healthy }
 
   tts-cpu:
-    image: ghcr.io/ecosystem/tts-cpu:${IMAGE_TAG:-latest}
+    image: ghcr.io/smykov/ai-services-tts-cpu:${IMAGE_TAG:-latest}
     restart: always
     environment:
       REDIS_URL: redis://redis:6379/0
@@ -118,7 +118,7 @@ services:
       - cpu-tts
 
   surya:
-    image: ghcr.io/ecosystem/surya:${IMAGE_TAG:-latest}
+    image: ghcr.io/smykov/ai-services-surya:${IMAGE_TAG:-latest}
     restart: always
     environment:
       REDIS_URL: redis://redis:6379/0

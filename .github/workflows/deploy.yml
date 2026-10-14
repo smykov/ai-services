@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 jobs:
   build-and-push:
@@ -26,8 +27,10 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/ecosystem/${{ matrix.service }}
+          images: ghcr.io/${{ github.repository_owner }}/ai-services-${{ matrix.service }}
+          # type=ref keeps the "v" (v1.2.3), which is what IMAGE_TAG in the cloud compose expects.
           tags: |
+            type=ref,event=tag
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
@@ -43,34 +46,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # The GPU VM runs the demo stack from a git checkout and builds images there, so this job
+  # does not wait for the registry images above.
   deploy-demo:
-    needs: build-and-push
     runs-on: [self-hosted, proxmox, linux]
+    concurrency: deploy-demo
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to the GPU VM via jump host
-        env:
-          SSH_KEY: ${{ secrets.DEMO_SSH_KEY }}
-          PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
-          VM110_HOST: ${{ secrets.VM110_HOST }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key \
-            -J root@$PROXMOX_HOST \
-            root@$VM110_HOST "
-            mkdir -p /opt/ecosystem-ai-services
-          "
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key \
-            -o ProxyJump=root@$PROXMOX_HOST \
-            deploy/docker-compose.demo.yml \
-            root@$VM110_HOST:/opt/ecosystem-ai-services/
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key \
-            -J root@$PROXMOX_HOST \
-            root@$VM110_HOST "
-            cd /opt/ecosystem-ai-services &&
-            IMAGE_TAG=${{ github.ref_name }} \
-            docker compose -f docker-compose.demo.yml pull &&
-            docker compose -f docker-compose.demo.yml up -d
-          "
+      # "ai-services-vm" is a Host alias in the runner user's ~/.ssh/config (address, user, key).
+      - name: Deploy to the GPU VM
+        run: ssh -o BatchMode=yes ai-services-vm bash -s -- "$GITHUB_SHA" < deploy/deploy-demo.sh
