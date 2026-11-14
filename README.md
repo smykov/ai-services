@@ -8,7 +8,8 @@ Monorepo for AI microservices (ASR, TTS, OCR, talking head) with MCP tool suppor
 |---------|-----|-------|----------|
 | **gateway** | No | FastAPI + MCP (SSE) | Routing, auth, task queue |
 | **asr** | Yes | Whisper large-v3 / turbo | Speech → text |
-| **tts-gpu** | Yes | XTTS-v2 / CosyVoice | Text → speech (high quality) |
+| **tts-gpu** | Yes | XTTS-v2 | Text → speech, voice cloning, Russian |
+| **tts-kokoro** | Yes (CPU works) | Kokoro-82M | Fast text → speech with preset voices (`model=kokoro`; en, es, fr, hi, it, pt) |
 | **tts-cpu** | No | Piper TTS | Text → speech (CPU scaling) |
 | **surya** | Optional | Surya OCR | Image → text + layout |
 | **avatar** | Yes | MuseTalk 1.5 + GFPGAN | Face video + speech → talking-head video |
@@ -43,6 +44,7 @@ See [docs/REST-API.md](docs/REST-API.md) and [docs/MCP-PROTOCOL.md](docs/MCP-PRO
 ├── gateway/          # FastAPI + MCP SSE endpoint
 ├── asr/              # Whisper ASR worker
 ├── tts-gpu/          # GPU TTS worker (XTTS-v2)
+├── tts-kokoro/       # Kokoro-82M TTS worker
 ├── tts-cpu/          # CPU TTS worker (Piper)
 ├── surya/            # Surya OCR worker
 ├── avatar/           # Talking-head worker (MuseTalk lip-sync, GFPGAN)
@@ -79,6 +81,10 @@ All settings via environment variables with `AI_` prefix:
 - **Speed:** a prepared face is cached by content hash (`face_id`), and only frames with speech go through the lip-sync network — pauses show cached idle frames, so long videos with pauses cost roughly their speaking time.
 - **Weights** are downloaded into the `avatar_models` volume on first start (about 4 GB) from their upstream sources and are not redistributed here: MuseTalk (MIT), sd-vae-ft-mse (CreativeML OpenRAIL-M), Whisper tiny (MIT), DWPose (Apache-2.0), face-parsing BiSeNet (MIT), GFPGAN (Apache-2.0). Check each license before commercial use.
 - **Consent:** use only faces of people who agreed to it, and do not present generated video as a real recording.
+
+## Kokoro TTS
+
+`model=kokoro` on `POST /v1/audio/speech` goes to the `tts-kokoro` worker: preset voices, no cloning, no Russian (the gateway answers 422 for those). It has its own image because it needs torch 2.6, while XTTS is pinned to torch 2.4. Weights (Kokoro-82M, Apache-2.0, about 330 MB) are downloaded into the `kokoro_models` volume on the first request; `KOKORO_DEVICE=cpu` runs it without a GPU at about 0.15 s per second of speech.
 
 ## Security
 

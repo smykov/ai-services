@@ -97,6 +97,33 @@ services:
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
 
+  # Fast English (and es/fr/hi/it/pt) speech with preset voices, model=kokoro. ~1 GB of VRAM.
+  tts-kokoro:
+    build:
+      context: ../
+      dockerfile: tts-kokoro/Dockerfile
+    profiles:
+      - gpu-workers
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: ai-services
+      HF_HOME: /models/hf
+    volumes:
+      - kokoro_models:/models
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+
   avatar:
     build:
       context: ../
@@ -207,3 +234,4 @@ volumes:
   asr_models:
   avatar_models:
   avatar_cache:
+  kokoro_models:

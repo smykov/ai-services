@@ -79,6 +79,29 @@ services:
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
 
+  tts-kokoro:
+    image: ghcr.io/smykov/ai-services-tts-kokoro:${IMAGE_TAG:-latest}
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ai-services
+      HF_HOME: /models/hf
+    volumes:
+      - kokoro_models:/models
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+
   avatar:
     image: ghcr.io/smykov/ai-services-avatar:${IMAGE_TAG:-latest}
     restart: always
@@ -132,6 +155,7 @@ services:
 
 volumes:
   avatar_models:
+  kokoro_models:
   avatar_cache:
   redis_data:
   minio_data:

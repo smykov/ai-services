@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [gateway, asr, tts-gpu, tts-cpu, surya, avatar]
+        service: [gateway, asr, tts-gpu, tts-kokoro, tts-cpu, surya, avatar]
     permissions:
       contents: read
       packages: write

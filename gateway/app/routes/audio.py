@@ -13,6 +13,7 @@ from ..core.container import container
 from ..core.http import read_json
 from ..core.minio import get_presigned_url, upload_file
 from ..core.redis import _wait_for_message
+from ..core.tts import is_kokoro, tts_queue
 
 router = APIRouter(dependencies=[Depends(verify_api_key)], tags=["audio"])
 
@@ -125,10 +126,11 @@ _SPEECH_REQUEST_BODY = {
                 "required": ["input"],
                 "properties": {
     "input": {"type": "string", "description": "Text to synthesize (alias: text)"},
-    "voice": {"type": "string", "default": "default", "description": "Voice name; ignored by XTTS unless a speaker_wav is given"},
-    "model": {"type": "string", "default": "xtts-v2", "description": "TTS model (tts-1 / tts-1-hd are aliases of xtts-v2)"},
-    "language": {"type": "string", "default": "ru", "description": "Language code (alias: locale)"},
+    "voice": {"type": "string", "default": "default", "description": "Kokoro voice (af_heart, am_michael, ...); XTTS ignores it"},
+    "model": {"type": "string", "default": "xtts-v2", "description": "xtts-v2 (cloning, Russian) or kokoro (fast, no Russian)"},
+    "language": {"type": "string", "default": "ru", "description": "Language code (alias: locale); default ru for xtts-v2, en for kokoro"},
     "async": {"type": "boolean", "default": False, "description": "Return task_id immediately instead of waiting"},
+    "speed": {"type": "number", "default": 1.0, "description": "Speech rate 0.5..2.0 (kokoro only)"},
     "speaker_wav": {"type": "string", "format": "byte", "description": "Voice sample for XTTS cloning, base64-encoded wav"},
 },
             }
@@ -139,10 +141,11 @@ _SPEECH_REQUEST_BODY = {
                 "required": ["input"],
                 "properties": {
     "input": {"type": "string", "description": "Text to synthesize (alias: text)"},
-    "voice": {"type": "string", "default": "default", "description": "Voice name; ignored by XTTS unless a speaker_wav is given"},
-    "model": {"type": "string", "default": "xtts-v2", "description": "TTS model (tts-1 / tts-1-hd are aliases of xtts-v2)"},
-    "language": {"type": "string", "default": "ru", "description": "Language code (alias: locale)"},
+    "voice": {"type": "string", "default": "default", "description": "Kokoro voice (af_heart, am_michael, ...); XTTS ignores it"},
+    "model": {"type": "string", "default": "xtts-v2", "description": "xtts-v2 (cloning, Russian) or kokoro (fast, no Russian)"},
+    "language": {"type": "string", "default": "ru", "description": "Language code (alias: locale); default ru for xtts-v2, en for kokoro"},
     "async": {"type": "boolean", "default": False, "description": "Return task_id immediately instead of waiting"},
+    "speed": {"type": "number", "default": 1.0, "description": "Speech rate 0.5..2.0 (kokoro only)"},
     "speaker_wav": {"type": "string", "format": "binary", "description": "Reference voice sample for XTTS cloning (wav file)"},
 },
             }
@@ -155,7 +158,7 @@ _SPEECH_REQUEST_BODY = {
     "/audio/speech",
     response_model=SpeechResponse,
     response_model_exclude_none=True,
-    summary="Synthesize speech (XTTS-v2), optionally cloning a voice from a sample",
+    summary="Synthesize speech with XTTS-v2 (optionally cloning a voice) or Kokoro",
     openapi_extra={"requestBody": _SPEECH_REQUEST_BODY},
 )
 async def synthesize_speech(request: Request):
@@ -170,7 +173,7 @@ async def synthesize_speech(request: Request):
     text = body.get("input", body.get("text"))
     voice = body.get("voice", "default")
     model_value = body.get("model", "xtts-v2")
-    language = body.get("language", body.get("locale", "ru"))
+    language = body.get("language") or body.get("locale") or ("en" if is_kokoro(model_value) else "ru")
     async_flag = str(body.get("async", body.get("async_", "false"))).lower() in ("true", "1")
 
     if not text:
@@ -180,6 +183,18 @@ async def synthesize_speech(request: Request):
 
     # Reference voice for XTTS: multipart file `speaker_wav`, or base64 string in JSON/form.
     sample = body.get("speaker_wav")
+    try:
+        queue = tts_queue(model_value, language, has_speaker_sample=sample is not None and sample != "")
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    if body.get("speed") not in (None, ""):
+        try:
+            speed = float(body["speed"])
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=422, detail="'speed' must be a number")
+        if not 0.5 <= speed <= 2.0:
+            raise HTTPException(status_code=422, detail="'speed' must be between 0.5 and 2.0")
+        payload["speed"] = str(speed)
     if sample is not None and sample != "":
         if hasattr(sample, "read"):
             sample_bytes = await sample.read()
@@ -202,7 +217,7 @@ async def synthesize_speech(request: Request):
     await pubsub.subscribe(channel)
 
     try:
-        await r.xadd("tts:queue", payload, maxlen=1000)
+        await r.xadd(queue, payload, maxlen=1000)
 
         if not async_flag:
             try:

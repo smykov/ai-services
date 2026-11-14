@@ -178,3 +178,32 @@ async def test_sync_worker_error_returns_502(client, monkeypatch, module, url, w
     resp = await client.post(url, headers=HEADERS, files={"file": ("f.bin", b"data", "application/octet-stream")})
     assert resp.status_code == 502
     assert f"{worker} worker failed: CUDA out of memory" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_kokoro_goes_to_its_own_queue(client):
+    from app.core.container import container
+    resp = await client.post(
+        "/v1/audio/speech",
+        headers=HEADERS,
+        json={"input": "Hello world", "model": "kokoro", "voice": "am_michael", "async": True},
+    )
+    assert resp.status_code == 200
+    task_id = resp.json()["task_id"]
+    r = await container.redis
+    entries = await r.xrevrange("tts:kokoro:queue", count=5)
+    task = next(fields for _, fields in entries if fields.get("task_id") == task_id)
+    assert task["language"] == "en"
+    assert task["voice"] == "am_michael"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("body,detail", [
+    ({"input": "Привет", "model": "kokoro", "language": "ru"}, "does not support language"),
+    ({"input": "Hi", "model": "kokoro", "speaker_wav": "UklGRg=="}, "preset voices only"),
+    ({"input": "Hi", "model": "kokoro", "speed": 5}, "between 0.5 and 2.0"),
+])
+async def test_kokoro_rejects_what_it_cannot_do(client, body, detail):
+    resp = await client.post("/v1/audio/speech", headers=HEADERS, json=body)
+    assert resp.status_code == 422
+    assert detail in resp.json()["detail"]

@@ -2,6 +2,7 @@ from collections.abc import Awaitable, Callable
 
 from ..core.container import container
 from ..core.redis import push_task
+from ..core.tts import is_kokoro, tts_queue
 
 ToolHandler = Callable[..., Awaitable[dict]]
 
@@ -54,17 +55,21 @@ async def transcribe_audio(arguments: dict) -> dict:
         "type": "object",
         "properties": {
             "text": {"type": "string", "description": "Text to synthesize"},
-            "voice": {"type": "string", "description": "Voice name", "default": "default"},
-            "model": {"type": "string", "description": "TTS model (xtts-v2, cosyvoice, piper)", "default": "xtts-v2"},
+            "voice": {"type": "string", "description": "Kokoro voice (af_heart, am_michael, bf_emma, ...)", "default": "default"},
+            "model": {"type": "string", "description": "xtts-v2 (Russian, cloning) or kokoro (fast, no Russian)", "default": "xtts-v2"},
+            "language": {"type": "string", "description": "Language code; default ru for xtts-v2, en for kokoro"},
         },
         "required": ["text"],
     },
 })
 async def synthesize_speech(arguments: dict) -> dict:
-    task_id = await push_task("tts:queue", {
+    model = arguments.get("model", "xtts-v2")
+    language = arguments.get("language") or ("en" if is_kokoro(model) else "ru")
+    task_id = await push_task(tts_queue(model, language), {
         "text": arguments["text"],
         "voice": arguments.get("voice", "default"),
-        "model": arguments.get("model", "xtts-v2"),
+        "model": model,
+        "language": language,
     })
     return {"task_id": task_id, "status": "pending"}
 
