@@ -16,6 +16,7 @@ All GPU workers fit on a single RTX 3090 (24 GB):
 |---------|------------|
 | asr (large-v3) | 3.0 GB |
 | tts-gpu (XTTS-v2) | 2.0 GB |
+| tts-kokoro (Kokoro-82M) | ~1 GB |
 | surya | 1.5 GB |
 | ollama (qwen2.5:7b) | 4.5 GB |
 | CUDA overhead | 0.5 GB |

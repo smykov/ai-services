@@ -44,15 +44,25 @@ Async response (200):
 POST /v1/audio/speech
 
 Form params:
-  text   (string)  Text to synthesize
-  voice  (string)  Voice name (default: default)
-  model  (string)  TTS model: xtts-v2, cosyvoice (default: xtts-v2)
-  async  (bool)    Async mode (default: false)
+  text      (string)  Text to synthesize (alias: input)
+  model     (string)  xtts-v2 (default; tts-1, tts-1-hd are aliases) or kokoro
+  language  (string)  Language code (default: ru for xtts-v2, en for kokoro)
+  voice     (string)  Kokoro voice: af_heart, am_michael, bf_emma, ... (default: the
+                      language's first voice); XTTS ignores it and clones speaker_wav
+  speed     (float)   Speech rate 0.5..2.0, kokoro only (default: 1.0)
+  async     (bool)    Async mode (default: false)
   speaker_wav  (file | base64 string)
                    Reference voice sample for XTTS voice cloning (optional).
                    multipart: file field; JSON/form: base64-encoded audio.
                    Without it the default voice is used.
                    Errors: 413 sample too large, 422 empty or invalid base64
+
+Models:
+  xtts-v2  Voice cloning, 17 languages including Russian. ~0.1 s per second of speech.
+  kokoro   Kokoro-82M, preset voices, en (en-US, en-GB), es, fr, hi, it, pt.
+           About 15x faster than XTTS on the GPU, clearer English, no cloning,
+           no Russian. 422 for an unsupported language or with speaker_wav.
+           Voices: https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md
 
 Response (200):
   {"audio_url": "http://...", "task_id": "..."}
